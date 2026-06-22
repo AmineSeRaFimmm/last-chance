@@ -120,30 +120,19 @@
   font-size: 14px;
   font-weight: 800;
   letter-spacing: 0.12em;
+  text-align: center;
   text-transform: uppercase;
 }
 
 .projection-focus-weight {
-  margin-top: 22px;
+  margin-top: 24px;
   color: var(--text);
   font-size: 58px;
   line-height: 0.95;
   letter-spacing: -0.07em;
   font-weight: 850;
   font-variant-numeric: tabular-nums;
-}
-
-.projection-focus-hint {
-  position: absolute;
-  left: 30px;
-  right: 30px;
-  bottom: 24px;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  opacity: 0.72;
+  text-align: center;
 }
 
 .projection-focus-card.projection-focus-animate[data-direction="up"] .projection-focus-week,
@@ -234,16 +223,11 @@
   }
 
   .projection-focus-card {
-    min-height: 226px;
+    min-height: 210px;
     padding: 26px;
   }
 
   .projection-focus-weight {
     font-size: 50px;
-  }
-
-  .projection-focus-hint {
-    left: 26px;
-    right: 26px;
   }
 }
