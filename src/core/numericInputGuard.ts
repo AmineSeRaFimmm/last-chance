@@ -14,7 +14,6 @@ export function installNumericInputGuard(): void {
       }
 
       if (target.value === "") {
-        event.stopImmediatePropagation();
         return;
       }
 
