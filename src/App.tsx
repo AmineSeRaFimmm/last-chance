@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { MacroResult, PlanResult, PlanType, Sex, UserInput } from "./core/types";
-import { buildCarbCyclingPlan } from "./core/carbCyclingPlan";
+import { buildSafeCarbCyclingPlan as buildCarbCyclingPlan } from "./core/carbCyclingSafePlan";
 import { ACTIVITY_LEVELS, DEFAULT_INPUTS } from "./core/constants";
 import { buildStandardPlan } from "./core/standardPlan";
 import { loadInput, saveInput } from "./storage/localPlan";
