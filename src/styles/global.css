@@ -53,13 +53,48 @@ button {
   padding: 24px 2px 14px;
 }
 
+.hero-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
 .eyebrow {
-  margin: 0 0 10px;
+  margin: 0;
   color: var(--muted);
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.12em;
+}
+
+.language-toggle {
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 999px;
+  background: #eeeeef;
+  flex: 0 0 auto;
+}
+
+.language-toggle button {
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 9px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.language-toggle button.active {
+  background: #ffffff;
+  color: var(--text);
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.08);
 }
 
 .hero-title {
@@ -161,20 +196,36 @@ button {
   border-color: #111111;
 }
 
-.primary-button {
-  width: 100%;
+.primary-button,
+.secondary-button {
   border: 0;
   border-radius: 20px;
   padding: 15px 18px;
-  background: #111111;
-  color: #ffffff;
   font-weight: 700;
   cursor: pointer;
+}
+
+.primary-button {
+  width: 100%;
+  background: #111111;
+  color: #ffffff;
   margin-top: 14px;
 }
 
-.primary-button:active {
+.secondary-button {
+  flex: 1;
+  background: #f2f2f7;
+  color: #111111;
+}
+
+.primary-button:active,
+.secondary-button:active {
   transform: scale(0.99);
+}
+
+.button-row {
+  display: flex;
+  gap: 10px;
 }
 
 .metric-grid {
@@ -241,6 +292,59 @@ button {
   color: var(--muted);
   font-size: 12px;
   font-weight: 650;
+}
+
+.check-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.check-grid div {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  background: #f5f5f7;
+  border-radius: 18px;
+  padding: 12px 14px;
+}
+
+.check-grid span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.check-grid strong {
+  font-size: 15px;
+}
+
+.projection-table {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.projection-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  background: #f5f5f7;
+  border-radius: 18px;
+  padding: 12px 13px;
+}
+
+.projection-row span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.projection-row strong {
+  font-size: 20px;
+  letter-spacing: -0.04em;
 }
 
 .warning {
@@ -325,5 +429,14 @@ button {
 
   .schedule-row {
     grid-template-columns: 46px 72px 1fr;
+  }
+
+  .projection-table,
+  .button-row {
+    grid-template-columns: 1fr;
+  }
+
+  .button-row {
+    flex-direction: column;
   }
 }
