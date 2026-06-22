@@ -1,34 +1,119 @@
 .projection-table {
+  position: relative;
+  display: grid;
   grid-template-columns: 1fr;
+  min-height: 94px;
+  overflow: hidden;
+  cursor: pointer;
+  user-select: none;
+  touch-action: pan-y;
 }
 
-.projection-table .projection-row:not(:last-child) {
+.projection-row {
   display: none;
 }
 
-.projection-table .projection-row:last-child {
+.projection-row.is-active {
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;
-  min-height: 74px;
+  min-height: 88px;
   padding: 18px;
+  background: linear-gradient(180deg, #f8f8fa 0%, #f0f0f4 100%);
+  border: 1px solid rgba(17, 17, 17, 0.04);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  animation: projection-settle 180ms ease-out;
 }
 
-.projection-table .projection-row:last-child span {
+.projection-row.is-active span {
   font-size: 13px;
 }
 
-.projection-table .projection-row:last-child strong {
+.projection-row.is-active strong {
   font-size: 34px;
   line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.projection-wheel::before,
+.projection-wheel::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 22px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.projection-wheel::before {
+  top: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7), transparent);
+}
+
+.projection-wheel::after {
+  bottom: 0;
+  background: linear-gradient(0deg, rgba(255, 255, 255, 0.7), transparent);
+}
+
+.projection-wheel.is-rolling .projection-row.is-active {
+  animation: projection-roll 72ms ease-in-out;
+}
+
+.projection-wheel.roll-complete .projection-row.is-active {
+  animation: projection-final 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .projection-table + .small-note {
   margin-bottom: 0;
 }
 
+@keyframes projection-roll {
+  from {
+    opacity: 0.25;
+    filter: blur(3px);
+    transform: translateY(18px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes projection-settle {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes projection-final {
+  0% {
+    transform: translateY(10px) scale(0.99);
+  }
+  70% {
+    transform: translateY(-2px) scale(1.01);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .projection-row.is-active,
+  .projection-wheel.is-rolling .projection-row.is-active,
+  .projection-wheel.roll-complete .projection-row.is-active {
+    animation: none;
+  }
+}
+
 @media (max-width: 420px) {
-  .projection-table .projection-row:last-child {
+  .projection-row.is-active {
     grid-template-columns: 1fr;
     gap: 8px;
   }
