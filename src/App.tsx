@@ -6,8 +6,21 @@ import { buildStandardPlan } from "./core/standardPlan";
 import { loadInput, saveInput } from "./storage/localPlan";
 
 type Language = "en" | "zh";
+type TimelineStatus = "empty" | "maintain" | "safe" | "standard" | "aggressive" | "high" | "blocked";
 
 const LANGUAGE_KEY = "last_chance_language";
+const DEFAULT_TIMELINE_WEEKS = 12;
+const MIN_TIMELINE_WEEKS = 1;
+const MAX_TIMELINE_WEEKS = 156;
+const HARD_TIMELINE_LIMIT_RATE = 0.02;
+
+interface TimelineRisk {
+  status: TimelineStatus;
+  title: string;
+  detail: string;
+  blocked: boolean;
+  planRate?: number;
+}
 
 function loadLanguage(): Language {
   if (typeof window === "undefined") return "en";
@@ -37,12 +50,14 @@ const copy = {
     height: "Height cm",
     weight: "Weight kg",
     target: "Target kg",
+    expectedTimeline: "Expected timeline weeks",
     activity: "Activity",
     trainingDays: "Training days",
     weeklyLoss: "Weekly loss %",
     protein: "Protein g/kg",
     saveLocal: "Save plan locally",
     savedLocal: "Saved locally",
+    adjustTimeline: "Adjust timeline first",
     result: "Result",
     calories: "Calories",
     proteinShort: "Protein",
@@ -78,7 +93,18 @@ const copy = {
     carbRules:
       "Keep weekly calories fixed. Put high-carb days on heavy legs, deadlift, or full-body sessions. Low-carb days are for rest, walking, or light cardio.",
     femaleRules:
-      "Use a moderate deficit, do not overreact to premenstrual water-weight changes, and monitor sleep, recovery, menstrual regularity, and hunger."
+      "Use a moderate deficit, do not overreact to premenstrual water-weight changes, and monitor sleep, recovery, menstrual regularity, and hunger.",
+    riskSetTarget: "Set target to assess risk",
+    riskSetTargetDetail: "Enter a target weight and timeline to calculate the required weekly loss rate.",
+    riskNoLossTarget: "Target is not below current weight",
+    riskNoLossTargetDetail: "If the target is not fat loss, the app keeps the default weekly loss setting.",
+    riskSafe: "Conservative range",
+    riskStandard: "Standard range",
+    riskAggressive: "Aggressive range",
+    riskHigh: "High-risk range",
+    riskBlocked: "Timeline too short",
+    riskDetail:
+      "Requires about {loss} kg/week, equal to {rate}% of body weight per week. Standard recommendation: at least {standardWeeks} weeks; hard minimum: no less than {hardWeeks} weeks."
   },
   zh: {
     eyebrow: "证据导向减脂计划",
@@ -95,12 +121,14 @@ const copy = {
     height: "身高 cm",
     weight: "体重 kg",
     target: "目标体重 kg",
+    expectedTimeline: "期待完成用时（周）",
     activity: "活动水平",
     trainingDays: "每周训练天数",
     weeklyLoss: "每周下降 %",
     protein: "蛋白 g/kg",
     saveLocal: "保存到本机",
     savedLocal: "已保存",
+    adjustTimeline: "先调整目标时间",
     result: "结果",
     calories: "热量",
     proteinShort: "蛋白质",
@@ -131,7 +159,18 @@ const copy = {
     execution: "执行规则",
     standardRules: "保持热量稳定，每天打够蛋白，用力量训练保留瘦体重；至少观察两周 7 日平均体重后再调整。",
     carbRules: "保持周热量不变。高碳日给重腿、硬拉、全身大容量训练；低碳日用于休息、步行或轻有氧。",
-    femaleRules: "使用温和赤字，不要因经前水重波动误判失败，并持续观察睡眠、恢复、月经规律和饥饿感。"
+    femaleRules: "使用温和赤字，不要因经前水重波动误判失败，并持续观察睡眠、恢复、月经规律和饥饿感。",
+    riskSetTarget: "设置目标后评估风险",
+    riskSetTargetDetail: "输入目标体重和期待完成用时后，系统会计算所需每周下降速度。",
+    riskNoLossTarget: "目标体重不低于当前体重",
+    riskNoLossTargetDetail: "如果目标不是减重，系统会使用默认每周下降设置。",
+    riskSafe: "保守区间",
+    riskStandard: "标准区间",
+    riskAggressive: "激进区间",
+    riskHigh: "高风险区间",
+    riskBlocked: "时间过短，不建议生成计划",
+    riskDetail:
+      "需要约 {loss} kg/周，等于当前体重的 {rate}%/周。标准建议至少 {standardWeeks} 周；硬性最低建议不少于 {hardWeeks} 周。"
   }
 } as const;
 
@@ -149,14 +188,14 @@ export default function App() {
   const [targetWeightKg, setTargetWeightKg] = useState<number | undefined>(
     savedInput?.targetWeightKg
   );
+  const [expectedTimelineWeeks, setExpectedTimelineWeeks] = useState(
+    savedInput?.expectedTimelineWeeks ?? DEFAULT_TIMELINE_WEEKS
+  );
   const [activityFactor, setActivityFactor] = useState(
     savedInput?.activityFactor ?? 1.5
   );
   const [trainingDaysPerWeek, setTrainingDaysPerWeek] = useState(
     savedInput?.trainingDaysPerWeek ?? 4
-  );
-  const [goalRatePctPerWeek, setGoalRatePctPerWeek] = useState(
-    savedInput?.goalRatePctPerWeek ?? DEFAULT_INPUTS.male.goalRatePctPerWeek
   );
   const [proteinFactor, setProteinFactor] = useState(
     savedInput?.proteinFactor ?? DEFAULT_INPUTS.male.proteinFactor
@@ -165,6 +204,11 @@ export default function App() {
 
   const t = copy[language];
   const effectivePlanType: PlanType = sex === "female" ? "standard" : planType;
+  const timelineRisk = useMemo(
+    () => buildTimelineRisk(weightKg, targetWeightKg, expectedTimelineWeeks, t),
+    [weightKg, targetWeightKg, expectedTimelineWeeks, t]
+  );
+  const goalRatePctPerWeek = timelineRisk.planRate ?? DEFAULT_INPUTS[sex].goalRatePctPerWeek;
 
   const input: UserInput = {
     sex,
@@ -173,6 +217,7 @@ export default function App() {
     heightCm,
     weightKg,
     targetWeightKg,
+    expectedTimelineWeeks,
     activityFactor,
     trainingDaysPerWeek,
     goalRatePctPerWeek,
@@ -192,6 +237,7 @@ export default function App() {
     heightCm,
     weightKg,
     targetWeightKg,
+    expectedTimelineWeeks,
     activityFactor,
     trainingDaysPerWeek,
     goalRatePctPerWeek,
@@ -208,15 +254,16 @@ export default function App() {
       app: "Last Chance",
       generatedAt: new Date().toISOString(),
       input,
+      timelineRisk,
       result,
       projection
     }),
-    [input, result, projection]
+    [input, timelineRisk, result, projection]
   );
 
   useEffect(() => {
     setSaved(false);
-  }, [result]);
+  }, [result, timelineRisk]);
 
   function handleLanguageChange(nextLanguage: Language) {
     setLanguage(nextLanguage);
@@ -229,19 +276,19 @@ export default function App() {
     if (nextSex === "female") {
       setPlanType("standard");
       setProteinFactor(DEFAULT_INPUTS.female.proteinFactor);
-      setGoalRatePctPerWeek(DEFAULT_INPUTS.female.goalRatePctPerWeek);
     } else {
       setProteinFactor(DEFAULT_INPUTS.male.proteinFactor);
-      setGoalRatePctPerWeek(DEFAULT_INPUTS.male.goalRatePctPerWeek);
     }
   }
 
   function handleSave() {
+    if (timelineRisk.blocked) return;
     saveInput(input);
     setSaved(true);
   }
 
   function handleDownloadJson() {
+    if (timelineRisk.blocked) return;
     downloadTextFile(
       "last-chance-plan.json",
       JSON.stringify(exportPayload, null, 2),
@@ -250,7 +297,8 @@ export default function App() {
   }
 
   function handleDownloadCsv() {
-    downloadTextFile("last-chance-plan.csv", buildCsv(input, result, projection), "text/csv");
+    if (timelineRisk.blocked) return;
+    downloadTextFile("last-chance-plan.csv", buildCsv(input, timelineRisk, result, projection), "text/csv");
   }
 
   return (
@@ -349,6 +397,13 @@ export default function App() {
             step={0.1}
             onChange={setTargetWeightKg}
           />
+          <NumberField
+            label={t.expectedTimeline}
+            value={expectedTimelineWeeks}
+            min={MIN_TIMELINE_WEEKS}
+            max={MAX_TIMELINE_WEEKS}
+            onChange={setExpectedTimelineWeeks}
+          />
           <div className="field">
             <label>{t.activity}</label>
             <select
@@ -369,19 +424,6 @@ export default function App() {
             max={6}
             onChange={setTrainingDaysPerWeek}
           />
-          <div className="field">
-            <label>{t.weeklyLoss}</label>
-            <input
-              type="number"
-              value={Number((goalRatePctPerWeek * 100).toFixed(2))}
-              min={0.2}
-              max={1.2}
-              step={0.05}
-              onChange={(event) =>
-                setGoalRatePctPerWeek(Number(event.target.value) / 100)
-              }
-            />
-          </div>
           <NumberField
             label={t.protein}
             value={proteinFactor}
@@ -391,8 +433,14 @@ export default function App() {
             onChange={setProteinFactor}
           />
         </div>
-        <button className="primary-button" onClick={handleSave} type="button">
-          {saved ? t.savedLocal : t.saveLocal}
+        <TimelineRiskPanel risk={timelineRisk} />
+        <button
+          className="primary-button"
+          disabled={timelineRisk.blocked}
+          onClick={handleSave}
+          type="button"
+        >
+          {timelineRisk.blocked ? t.adjustTimeline : saved ? t.savedLocal : t.saveLocal}
         </button>
       </section>
 
@@ -437,10 +485,20 @@ export default function App() {
       <section className="card">
         <div className="card-title">{t.export}</div>
         <div className="button-row">
-          <button className="secondary-button" type="button" onClick={handleDownloadJson}>
+          <button
+            className="secondary-button"
+            disabled={timelineRisk.blocked}
+            type="button"
+            onClick={handleDownloadJson}
+          >
             {t.exportJson}
           </button>
-          <button className="secondary-button" type="button" onClick={handleDownloadCsv}>
+          <button
+            className="secondary-button"
+            disabled={timelineRisk.blocked}
+            type="button"
+            onClick={handleDownloadCsv}
+          >
             {t.exportCsv}
           </button>
         </div>
@@ -520,7 +578,10 @@ function NumberField({
         min={min}
         max={max}
         step={step}
-        onChange={(event) => onChange(Number(event.target.value))}
+        onChange={(event) => {
+          const nextValue = Number(event.target.value);
+          if (Number.isFinite(nextValue)) onChange(nextValue);
+        }}
       />
     </div>
   );
@@ -551,10 +612,26 @@ function OptionalNumberField({
         max={max}
         step={step}
         placeholder="Optional"
-        onChange={(event) =>
-          onChange(event.target.value === "" ? undefined : Number(event.target.value))
-        }
+        onChange={(event) => {
+          const rawValue = event.target.value.trim();
+          if (rawValue === "") {
+            onChange(undefined);
+            return;
+          }
+
+          const nextValue = Number(rawValue);
+          if (Number.isFinite(nextValue)) onChange(nextValue);
+        }}
       />
+    </div>
+  );
+}
+
+function TimelineRiskPanel({ risk }: { risk: TimelineRisk }) {
+  return (
+    <div className={`timeline-risk-panel ${risk.status}`}>
+      <strong>{risk.title}</strong>
+      <span>{risk.detail}</span>
     </div>
   );
 }
@@ -644,6 +721,80 @@ function WeeklyCalorieCheck({
   );
 }
 
+function buildTimelineRisk(
+  currentWeightKg: number,
+  targetWeightKg: number | undefined,
+  expectedTimelineWeeks: number,
+  labels: typeof copy.en | typeof copy.zh
+): TimelineRisk {
+  if (!Number.isFinite(currentWeightKg) || !Number.isFinite(expectedTimelineWeeks)) {
+    return {
+      status: "empty",
+      title: labels.riskSetTarget,
+      detail: labels.riskSetTargetDetail,
+      blocked: false
+    };
+  }
+
+  if (targetWeightKg === undefined || !Number.isFinite(targetWeightKg)) {
+    return {
+      status: "empty",
+      title: labels.riskSetTarget,
+      detail: labels.riskSetTargetDetail,
+      blocked: false
+    };
+  }
+
+  if (targetWeightKg >= currentWeightKg) {
+    return {
+      status: "maintain",
+      title: labels.riskNoLossTarget,
+      detail: labels.riskNoLossTargetDetail,
+      blocked: false
+    };
+  }
+
+  const weeks = Math.min(
+    MAX_TIMELINE_WEEKS,
+    Math.max(MIN_TIMELINE_WEEKS, Math.round(expectedTimelineWeeks))
+  );
+  const totalLossKg = currentWeightKg - targetWeightKg;
+  const weeklyLossKg = totalLossKg / weeks;
+  const weeklyRate = weeklyLossKg / currentWeightKg;
+  const standardWeeks = Math.max(1, Math.ceil(totalLossKg / (currentWeightKg * 0.01)));
+  const hardWeeks = Math.max(1, Math.ceil(totalLossKg / (currentWeightKg * HARD_TIMELINE_LIMIT_RATE)));
+  const detail = labels.riskDetail
+    .replace("{loss}", weeklyLossKg.toFixed(2))
+    .replace("{rate}", (weeklyRate * 100).toFixed(2))
+    .replace("{standardWeeks}", String(standardWeeks))
+    .replace("{hardWeeks}", String(hardWeeks));
+  const planRate = Math.min(HARD_TIMELINE_LIMIT_RATE, Math.max(0.002, weeklyRate));
+
+  if (weeklyRate > HARD_TIMELINE_LIMIT_RATE) {
+    return {
+      status: "blocked",
+      title: labels.riskBlocked,
+      detail,
+      blocked: true,
+      planRate
+    };
+  }
+
+  if (weeklyRate > 0.015) {
+    return { status: "high", title: labels.riskHigh, detail, blocked: false, planRate };
+  }
+
+  if (weeklyRate > 0.01) {
+    return { status: "aggressive", title: labels.riskAggressive, detail, blocked: false, planRate };
+  }
+
+  if (weeklyRate >= 0.005) {
+    return { status: "standard", title: labels.riskStandard, detail, blocked: false, planRate };
+  }
+
+  return { status: "safe", title: labels.riskSafe, detail, blocked: false, planRate };
+}
+
 function buildTwelveWeekProjection(
   currentWeightKg: number,
   weeklyLossKg: number,
@@ -678,6 +829,7 @@ function downloadTextFile(filename: string, content: string, mimeType: string) {
 
 function buildCsv(
   input: UserInput,
+  timelineRisk: TimelineRisk,
   result: PlanResult,
   projection: { week: number; weightKg: number }[]
 ): string {
@@ -689,10 +841,13 @@ function buildCsv(
   lines.push(`input,heightCm,${input.heightCm}`);
   lines.push(`input,weightKg,${input.weightKg}`);
   lines.push(`input,targetWeightKg,${input.targetWeightKg ?? ""}`);
+  lines.push(`input,expectedTimelineWeeks,${input.expectedTimelineWeeks}`);
   lines.push(`input,activityFactor,${input.activityFactor}`);
   lines.push(`input,trainingDaysPerWeek,${input.trainingDaysPerWeek}`);
   lines.push(`input,goalRatePctPerWeek,${input.goalRatePctPerWeek}`);
   lines.push(`input,proteinFactor,${input.proteinFactor}`);
+  lines.push(`timeline,status,${timelineRisk.status}`);
+  lines.push(`timeline,blocked,${timelineRisk.blocked}`);
   lines.push(`result,rmr,${result.rmr}`);
   lines.push(`result,tdee,${result.tdee}`);
   lines.push(`result,dailyDeficitKcal,${result.dailyDeficitKcal}`);
