@@ -72,6 +72,7 @@ function setupWeeklyStructureCard(card: HTMLElement): void {
   if (rows.length !== 7) return;
 
   const isZh = title.textContent?.trim() === "一周结构";
+  resetBaseItemsIfReactRenderedNewSchedule(card, rows);
   const baseItems = readBaseItems(rows);
   const signature = buildBaseSignature(baseItems);
 
@@ -173,6 +174,10 @@ function renderFocusControls(card: HTMLElement, baseItems: ScheduleItem[], isZh:
   if (!grid) return;
 
   const focusByDay = loadFocusByDay();
+  const nextSignature = `${isZh ? "zh" : "en"}|${buildBaseSignature(baseItems)}|${JSON.stringify(focusByDay)}`;
+  if (grid.dataset.focusSignature === nextSignature) return;
+
+  grid.dataset.focusSignature = nextSignature;
   grid.innerHTML = "";
 
   baseItems.forEach((item) => {
@@ -216,9 +221,7 @@ function renderAdjustedSchedule(
   const rotationLabel = card.querySelector<HTMLElement>("[data-rotation-label]");
   const copy = getCopy(isZh);
 
-  if (rotationLabel) {
-    rotationLabel.textContent = `${copy.rotation} ${formatRotation(loadRotationOffset())}`;
-  }
+  setTextIfChanged(rotationLabel, `${copy.rotation} ${formatRotation(loadRotationOffset())}`);
 
   rows.forEach((row, index) => {
     const item = baseItems[index];
@@ -227,13 +230,12 @@ function renderAdjustedSchedule(
     const typeElement = row.querySelector<HTMLElement>(".day-type");
     const noteElement = row.querySelector<HTMLElement>(".small-note");
 
-    if (typeElement) {
-      typeElement.textContent = type;
-      typeElement.className = `day-type ${type.toLowerCase()}`;
-    }
-
-    if (noteElement) noteElement.textContent = getFocusLabel(focusKey, isZh);
+    setTextIfChanged(typeElement, type);
+    if (typeElement) typeElement.className = `day-type ${type.toLowerCase()}`;
+    setTextIfChanged(noteElement, getFocusLabel(focusKey, isZh));
   });
+
+  card.dataset.renderedAdjustedSignature = buildCurrentRenderedSignature(rows);
 }
 
 function readBaseItems(rows: HTMLElement[]): ScheduleItem[] {
@@ -252,6 +254,36 @@ function readBaseItems(rows: HTMLElement[]): ScheduleItem[] {
       note: row.dataset.baseNote
     };
   });
+}
+
+function resetBaseItemsIfReactRenderedNewSchedule(card: HTMLElement, rows: HTMLElement[]): void {
+  const renderedSignature = buildCurrentRenderedSignature(rows);
+  const previousAdjustedSignature = card.dataset.renderedAdjustedSignature;
+
+  if (!previousAdjustedSignature || renderedSignature === previousAdjustedSignature) return;
+
+  rows.forEach((row) => {
+    delete row.dataset.baseDay;
+    delete row.dataset.baseType;
+    delete row.dataset.baseNote;
+  });
+
+  delete card.dataset.weeklyBaseSignature;
+}
+
+function buildCurrentRenderedSignature(rows: HTMLElement[]): string {
+  return rows
+    .map((row) => {
+      const day = row.querySelector("strong")?.textContent?.trim() || "";
+      const type = row.querySelector(".day-type")?.textContent?.trim() || "";
+      const note = row.querySelector(".small-note")?.textContent?.trim() || "";
+      return `${day}:${type}:${note}`;
+    })
+    .join("|");
+}
+
+function setTextIfChanged(element: HTMLElement | null, value: string): void {
+  if (element && element.textContent !== value) element.textContent = value;
 }
 
 function rotateCarbTypes(types: CarbType[], offset: number): CarbType[] {
