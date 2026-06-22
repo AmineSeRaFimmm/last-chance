@@ -16,7 +16,7 @@ export function sanitizeUserInput(input: UserInput): UserInput {
     targetWeightKg,
     activityFactor: sanitizeNumber(input.activityFactor, 1.2, 1.8, 1.5),
     trainingDaysPerWeek: Math.round(sanitizeNumber(input.trainingDaysPerWeek, 0, 6, 4)),
-    goalRatePctPerWeek: sanitizeNumber(input.goalRatePctPerWeek, 0.002, 0.012, defaultGoalRate),
+    goalRatePctPerWeek: sanitizeNumber(input.goalRatePctPerWeek, 0.002, 0.02, defaultGoalRate),
     proteinFactor: sanitizeNumber(input.proteinFactor, 1.4, 2.4, defaultProtein)
   };
 }
