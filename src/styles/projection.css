@@ -6,7 +6,7 @@
   overflow: hidden;
   cursor: pointer;
   user-select: none;
-  touch-action: pan-y;
+  touch-action: manipulation;
 }
 
 .projection-row {
@@ -56,29 +56,94 @@
   background: linear-gradient(0deg, rgba(255, 255, 255, 0.7), transparent);
 }
 
-.projection-wheel.is-rolling .projection-row.is-active {
-  animation: projection-roll 72ms ease-in-out;
-}
-
-.projection-wheel.roll-complete .projection-row.is-active {
-  animation: projection-final 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
 .projection-table + .small-note {
   margin-bottom: 0;
 }
 
-@keyframes projection-roll {
-  from {
-    opacity: 0.25;
-    filter: blur(3px);
-    transform: translateY(18px) scale(0.985);
-  }
-  to {
-    opacity: 1;
-    filter: blur(0);
-    transform: translateY(0) scale(1);
-  }
+.projection-focus-open {
+  overflow: hidden;
+}
+
+.projection-focus-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: max(28px, env(safe-area-inset-top)) 22px max(28px, env(safe-area-inset-bottom));
+  animation: focus-overlay-in 180ms ease-out;
+}
+
+.projection-focus-overlay.is-closing {
+  animation: focus-overlay-out 160ms ease-in forwards;
+}
+
+.projection-focus-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(245, 245, 247, 0.58);
+  backdrop-filter: blur(22px) saturate(1.35);
+  -webkit-backdrop-filter: blur(22px) saturate(1.35);
+}
+
+.projection-focus-card {
+  position: relative;
+  z-index: 1;
+  width: min(420px, 100%);
+  min-height: 244px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 34px;
+  padding: 30px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(246, 246, 249, 0.86));
+  box-shadow:
+    0 30px 90px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.88);
+  outline: none;
+  touch-action: none;
+  transform-origin: center;
+  animation: focus-card-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.projection-focus-week {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.projection-focus-weight {
+  margin-top: 22px;
+  color: var(--text);
+  font-size: 58px;
+  line-height: 0.95;
+  letter-spacing: -0.07em;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+}
+
+.projection-focus-hint {
+  position: absolute;
+  left: 30px;
+  right: 30px;
+  bottom: 24px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.72;
+}
+
+.projection-focus-card.projection-focus-animate[data-direction="up"] .projection-focus-week,
+.projection-focus-card.projection-focus-animate[data-direction="up"] .projection-focus-weight {
+  animation: focus-value-up 180ms ease-out;
+}
+
+.projection-focus-card.projection-focus-animate[data-direction="down"] .projection-focus-week,
+.projection-focus-card.projection-focus-animate[data-direction="down"] .projection-focus-weight {
+  animation: focus-value-down 180ms ease-out;
 }
 
 @keyframes projection-settle {
@@ -92,22 +157,62 @@
   }
 }
 
-@keyframes projection-final {
-  0% {
-    transform: translateY(10px) scale(0.99);
+@keyframes focus-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes focus-overlay-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes focus-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.94);
   }
-  70% {
-    transform: translateY(-2px) scale(1.01);
-  }
-  100% {
+  to {
+    opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes focus-value-up {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+@keyframes focus-value-down {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translateY(-24px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .projection-row.is-active,
-  .projection-wheel.is-rolling .projection-row.is-active,
-  .projection-wheel.roll-complete .projection-row.is-active {
+  .projection-focus-overlay,
+  .projection-focus-overlay.is-closing,
+  .projection-focus-card,
+  .projection-focus-card.projection-focus-animate[data-direction="up"] .projection-focus-week,
+  .projection-focus-card.projection-focus-animate[data-direction="up"] .projection-focus-weight,
+  .projection-focus-card.projection-focus-animate[data-direction="down"] .projection-focus-week,
+  .projection-focus-card.projection-focus-animate[data-direction="down"] .projection-focus-weight {
     animation: none;
   }
 }
@@ -116,5 +221,19 @@
   .projection-row.is-active {
     grid-template-columns: 1fr;
     gap: 8px;
+  }
+
+  .projection-focus-card {
+    min-height: 226px;
+    padding: 26px;
+  }
+
+  .projection-focus-weight {
+    font-size: 50px;
+  }
+
+  .projection-focus-hint {
+    left: 26px;
+    right: 26px;
   }
 }
