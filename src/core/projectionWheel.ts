@@ -23,25 +23,33 @@ export function installProjectionWheel(): void {
 }
 
 function setupProjectionCard(table: HTMLElement): void {
-  if (table.dataset.focusReady === "true") return;
-
   const rows = Array.from(table.querySelectorAll<HTMLElement>(".projection-row"));
-  const items = rows.map(readProjectionItem).filter(Boolean) as ProjectionItem[];
+  const items = readProjectionItems(table);
   if (items.length === 0) return;
 
-  table.dataset.focusReady = "true";
+  const signature = buildProjectionSignature(items);
+  if (table.dataset.projectionSignature !== signature) {
+    table.dataset.projectionSignature = signature;
+    setActiveRow(rows, 0);
+  }
+
   table.classList.add("projection-wheel");
   table.setAttribute("role", "button");
   table.setAttribute("tabindex", "0");
-  table.setAttribute("aria-label", "Open 12-week projection focus view");
+  table.setAttribute("aria-label", "Open projection focus view");
 
-  setActiveRow(rows, 0);
+  if (table.dataset.focusReady === "true") return;
 
-  table.addEventListener("click", () => openProjectionFocus(items));
+  table.dataset.focusReady = "true";
+  table.addEventListener("click", () => {
+    const currentItems = readProjectionItems(table);
+    if (currentItems.length > 0) openProjectionFocus(currentItems);
+  });
   table.addEventListener("keydown", (event) => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      openProjectionFocus(items);
+      const currentItems = readProjectionItems(table);
+      if (currentItems.length > 0) openProjectionFocus(currentItems);
     }
   });
 }
@@ -62,7 +70,7 @@ function openProjectionFocus(items: ProjectionItem[]): void {
   overlay.className = "projection-focus-overlay";
   overlay.setAttribute("role", "dialog");
   overlay.setAttribute("aria-modal", "true");
-  overlay.setAttribute("aria-label", "12-week projection focus view");
+  overlay.setAttribute("aria-label", "Projection focus view");
 
   const backdrop = document.createElement("button");
   backdrop.className = "projection-focus-backdrop";
@@ -177,13 +185,22 @@ function openProjectionFocus(items: ProjectionItem[]): void {
   window.setTimeout(() => card.focus(), 0);
 }
 
+function readProjectionItems(table: HTMLElement): ProjectionItem[] {
+  return Array.from(table.querySelectorAll<HTMLElement>(".projection-row"))
+    .map(readProjectionItem)
+    .filter(Boolean) as ProjectionItem[];
+}
+
 function readProjectionItem(row: HTMLElement): ProjectionItem | null {
   const week = row.querySelector("span")?.textContent?.trim();
   const weight = row.querySelector("strong")?.textContent?.trim();
 
   if (!week || !weight) return null;
-
   return { week, weight };
+}
+
+function buildProjectionSignature(items: ProjectionItem[]): string {
+  return items.map((item) => `${item.week}:${item.weight}`).join("|");
 }
 
 function setActiveRow(rows: HTMLElement[], activeIndex: number): void {
