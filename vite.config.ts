@@ -8,7 +8,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["icon.svg", "screenshot-mobile.svg"],
+      includeAssets: ["icon.svg", "icon-192.png", "icon-512.png", "apple-touch-icon.png", "screenshot-mobile.svg"],
       manifest: {
         id: "/last-chance/",
         name: "Last Chance",
@@ -22,6 +22,18 @@ export default defineConfig({
         scope: "/last-chance/",
         categories: ["health", "fitness", "lifestyle"],
         icons: [
+          {
+            src: "/last-chance/icon-192.png",
+            sizes: "192x192",
+            type: "image/png",
+            purpose: "any maskable"
+          },
+          {
+            src: "/last-chance/icon-512.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "any maskable"
+          },
           {
             src: "/last-chance/icon.svg",
             sizes: "any",
