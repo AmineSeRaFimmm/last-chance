@@ -74,9 +74,9 @@ const copy = {
     installNote: "iPhone: open this site in Safari, tap Share, then Add to Home Screen.",
     disclaimer:
       "Last Chance is not medical advice. If pregnant, breastfeeding, under 18, diagnosed with diabetes, kidney disease, eating disorder, or using medication affecting appetite or blood glucose, seek professional guidance first.",
-    projection: "12-week projection",
+    projection: "Target timeline projection",
     projectionNote:
-      "This projection assumes adherence and no metabolic adaptation. Use 7-day average body weight to judge the trend.",
+      "When a target weight is set, this projection follows your expected timeline. If no target is set, it falls back to 12 weeks.",
     week: "Week",
     projectedWeight: "Projected weight",
     expectedLoss: "Expected loss",
@@ -144,8 +144,8 @@ const copy = {
     installNote: "iPhone：用 Safari 打开，点击分享，然后选择添加到主屏幕。",
     disclaimer:
       "Last Chance 不是医疗建议。孕期、哺乳期、未成年人、糖尿病、肾脏疾病、进食障碍史，或正在使用影响食欲/血糖药物的人，应先咨询专业人士。",
-    projection: "12 周预测",
-    projectionNote: "该预测假设严格执行且不考虑代谢适应。判断趋势时请使用 7 日平均体重。",
+    projection: "目标时间预测",
+    projectionNote: "设置目标体重后，预测长度会跟随期待完成用时；未设置目标体重时，默认显示 12 周。",
     week: "周数",
     projectedWeight: "预测体重",
     expectedLoss: "预计下降",
@@ -245,8 +245,8 @@ export default function App() {
   ]);
 
   const projection = useMemo(
-    () => buildTwelveWeekProjection(weightKg, result.weeklyLossKg, targetWeightKg),
-    [weightKg, result.weeklyLossKg, targetWeightKg]
+    () => buildTimelineProjection(weightKg, result.weeklyLossKg, targetWeightKg, expectedTimelineWeeks),
+    [weightKg, result.weeklyLossKg, targetWeightKg, expectedTimelineWeeks]
   );
 
   const exportPayload = useMemo(
@@ -795,18 +795,22 @@ function buildTimelineRisk(
   return { status: "safe", title: labels.riskSafe, detail, blocked: false, planRate };
 }
 
-function buildTwelveWeekProjection(
+function buildTimelineProjection(
   currentWeightKg: number,
   weeklyLossKg: number,
-  targetWeightKg?: number
+  targetWeightKg: number | undefined,
+  expectedTimelineWeeks: number
 ) {
-  return Array.from({ length: 12 }, (_, index) => {
+  const hasWeightTarget =
+    Number.isFinite(targetWeightKg) && targetWeightKg !== undefined && targetWeightKg < currentWeightKg;
+  const totalWeeks = hasWeightTarget
+    ? Math.min(MAX_TIMELINE_WEEKS, Math.max(MIN_TIMELINE_WEEKS, Math.round(expectedTimelineWeeks)))
+    : DEFAULT_TIMELINE_WEEKS;
+
+  return Array.from({ length: totalWeeks }, (_, index) => {
     const week = index + 1;
     const rawWeight = currentWeightKg - weeklyLossKg * week;
-    const weightKg =
-      targetWeightKg && targetWeightKg < currentWeightKg
-        ? Math.max(rawWeight, targetWeightKg)
-        : rawWeight;
+    const weightKg = hasWeightTarget ? Math.max(rawWeight, targetWeightKg) : rawWeight;
 
     return {
       week,
