@@ -475,7 +475,7 @@ export default function App() {
           {projection.map((row) => (
             <div className="projection-row" key={row.week}>
               <span>{t.week} {row.week}</span>
-              <strong>{row.weightKg.toFixed(1)} kg</strong>
+              <strong>{row.weightKg.toFixed(2)} kg</strong>
             </div>
           ))}
         </div>
