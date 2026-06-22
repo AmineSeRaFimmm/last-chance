@@ -1,12 +1,13 @@
 import { useState } from "react";
 import App from "./App";
+import { DietPlanner } from "./components/DietPlanner";
 import { StandaloneProgressTracker } from "./components/StandaloneProgressTracker";
 
-type View = "plan" | "track";
+type View = "plan" | "diet" | "track";
 
 const copy = {
-  en: { plan: "Plan", track: "Track" },
-  zh: { plan: "计划", track: "跟踪" }
+  en: { plan: "Plan", diet: "Diet", track: "Track" },
+  zh: { plan: "计划", diet: "饮食", track: "跟踪" }
 } as const;
 
 export default function Root() {
@@ -17,13 +18,20 @@ export default function Root() {
   return (
     <>
       <nav className="app-shell top-nav-shell" aria-label="Primary navigation">
-        <div className="top-nav segmented two">
+        <div className="top-nav segmented three">
           <button
             className={view === "plan" ? "active" : ""}
             onClick={() => setView("plan")}
             type="button"
           >
             {t.plan}
+          </button>
+          <button
+            className={view === "diet" ? "active" : ""}
+            onClick={() => setView("diet")}
+            type="button"
+          >
+            {t.diet}
           </button>
           <button
             className={view === "track" ? "active" : ""}
@@ -34,7 +42,9 @@ export default function Root() {
           </button>
         </div>
       </nav>
-      {view === "plan" ? <App /> : <StandaloneProgressTracker />}
+      {view === "plan" && <App />}
+      {view === "diet" && <DietPlanner />}
+      {view === "track" && <StandaloneProgressTracker />}
     </>
   );
 }
