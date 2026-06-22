@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Last Chance icon">
+  <rect width="512" height="512" rx="112" fill="#111111"/>
+  <circle cx="256" cy="256" r="168" fill="none" stroke="#FFFFFF" stroke-width="18" opacity="0.18"/>
+  <path d="M160 338V174h34v134h72v30H160Z" fill="#FFFFFF"/>
+  <path d="M292 340c-48 0-82-35-82-84s35-84 84-84c32 0 58 15 72 40l-29 16c-8-16-23-25-43-25-29 0-49 22-49 53 0 32 20 53 49 53 20 0 36-9 44-25l29 16c-15 25-42 40-75 40Z" fill="#FFFFFF"/>
+</svg>
