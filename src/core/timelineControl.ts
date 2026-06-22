@@ -80,7 +80,7 @@ function setupTimelineControl(): void {
     const targetWeightKg = readOptionalNumber(targetInput);
     const risk = evaluateTimelineRisk(weightKg, targetWeightKg, weeks, language);
     renderRiskPanel(riskPanel, risk);
-    setSaveBlocked(saveButton, risk.blocked, copy.blockedSave);
+    setPlanActionsBlocked(saveButton, risk.blocked, copy.blockedSave);
 
     if (Number.isFinite(weightKg) && Number.isFinite(targetWeightKg) && targetWeightKg < weightKg) {
       const requiredRate = (weightKg - targetWeightKg) / weeks / weightKg;
@@ -164,6 +164,14 @@ function evaluateTimelineRisk(weightKg: number, targetWeightKg: number, weeks: n
 function renderRiskPanel(panel: HTMLElement, risk: TimelineRisk): void {
   panel.className = `timeline-risk-panel ${risk.status}`;
   panel.innerHTML = `<strong>${risk.title}</strong><span>${risk.detail}</span>`;
+}
+
+function setPlanActionsBlocked(saveButton: HTMLButtonElement, blocked: boolean, blockedText: string): void {
+  setSaveBlocked(saveButton, blocked, blockedText);
+  document.querySelectorAll<HTMLButtonElement>(".button-row .secondary-button").forEach((button) => {
+    button.disabled = blocked;
+    button.classList.toggle("timeline-save-blocked", blocked);
+  });
 }
 
 function setSaveBlocked(button: HTMLButtonElement, blocked: boolean, blockedText: string): void {
