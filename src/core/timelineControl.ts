@@ -72,12 +72,12 @@ function setupTimelineControl(): void {
   }
 
   const update = () => {
-    const weeks = sanitizeWeeks(Number(timelineInput?.value));
+    const weeks = sanitizeWeeks(readRequiredNumber(timelineInput));
     if (timelineInput && String(weeks) !== timelineInput.value) timelineInput.value = String(weeks);
     saveWeeks(weeks);
 
-    const weightKg = Number(weightInput.value);
-    const targetWeightKg = Number(targetInput.value);
+    const weightKg = readRequiredNumber(weightInput);
+    const targetWeightKg = readOptionalNumber(targetInput);
     const risk = evaluateTimelineRisk(weightKg, targetWeightKg, weeks, language);
     renderRiskPanel(riskPanel, risk);
     setSaveBlocked(saveButton, risk.blocked, copy.blockedSave);
@@ -210,6 +210,16 @@ function findFieldByLabel(labels: string[]): HTMLElement | null {
 
 function findInputByLabel(labels: string[]): HTMLInputElement | null {
   return findFieldByLabel(labels)?.querySelector("input") ?? null;
+}
+
+function readRequiredNumber(input: HTMLInputElement | null): number {
+  if (!input || input.value.trim() === "") return Number.NaN;
+  return Number(input.value);
+}
+
+function readOptionalNumber(input: HTMLInputElement | null): number {
+  if (!input || input.value.trim() === "") return Number.NaN;
+  return Number(input.value);
 }
 
 function sanitizeWeeks(value: number): number {
