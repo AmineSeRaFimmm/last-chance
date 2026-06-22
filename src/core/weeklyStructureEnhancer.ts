@@ -20,8 +20,13 @@ interface ScheduleItem {
   note: string;
 }
 
+interface AdjustedScheduleItem extends ScheduleItem {
+  focusKey: TrainingFocusKey;
+}
+
 const ROTATION_KEY = "last_chance_carb_rotation_offset";
 const FOCUS_KEY = "last_chance_training_focus_by_day";
+const SWIPE_THRESHOLD_PX = 34;
 
 const TRAINING_OPTIONS: TrainingFocusKey[] = [
   "heavyLegs",
@@ -80,16 +85,13 @@ function setupWeeklyStructureCard(card: HTMLElement): void {
     card.dataset.weeklyStructureReady = "true";
     card.classList.add("weekly-structure-card");
     installHeader(card, title, isZh);
-    installPanel(card, isZh);
   }
 
   if (card.dataset.weeklyBaseSignature !== signature) {
     card.dataset.weeklyBaseSignature = signature;
-    renderAdjustedSchedule(card, rows, baseItems, isZh);
-    renderFocusControls(card, baseItems, isZh);
-  } else {
-    renderAdjustedSchedule(card, rows, baseItems, isZh);
   }
+
+  renderAdjustedSchedule(card, rows, baseItems, isZh);
 }
 
 function installHeader(card: HTMLElement, title: HTMLElement, isZh: boolean): void {
@@ -102,111 +104,202 @@ function installHeader(card: HTMLElement, title: HTMLElement, isZh: boolean): vo
   button.className = "adjust-button";
   button.type = "button";
   button.textContent = isZh ? "调整" : "Adjust";
-  button.setAttribute("aria-expanded", "false");
+  button.setAttribute("aria-haspopup", "dialog");
 
   title.replaceWith(header);
   header.append(title, button);
 
   button.addEventListener("click", () => {
-    const open = card.classList.toggle("is-adjusting");
-    button.setAttribute("aria-expanded", String(open));
-    button.textContent = open ? (isZh ? "完成" : "Done") : (isZh ? "调整" : "Adjust");
+    const rows = Array.from(card.querySelectorAll<HTMLElement>(".schedule-row"));
+    const baseItems = readBaseItems(rows);
+    openWeeklyStructureEditor(card, baseItems, isZh);
   });
 }
 
-function installPanel(card: HTMLElement, isZh: boolean): void {
-  if (card.querySelector(".schedule-adjust-panel")) return;
-
+function openWeeklyStructureEditor(card: HTMLElement, baseItems: ScheduleItem[], isZh: boolean): void {
+  document.querySelector(".weekly-adjust-overlay")?.remove();
   const copy = getCopy(isZh);
+  let startY = 0;
+  let startOffset = loadRotationOffset();
+  let activePointerId: number | null = null;
+
+  const overlay = document.createElement("div");
+  overlay.className = "weekly-adjust-overlay";
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
+  overlay.setAttribute("aria-label", copy.editorTitle);
+
+  const backdrop = document.createElement("button");
+  backdrop.className = "weekly-adjust-backdrop";
+  backdrop.type = "button";
+  backdrop.setAttribute("aria-label", copy.done);
+
   const panel = document.createElement("div");
-  panel.className = "schedule-adjust-panel";
-  panel.innerHTML = `
-    <div class="schedule-adjust-section">
-      <div>
-        <strong>${copy.rotationTitle}</strong>
-        <p>${copy.rotationNote}</p>
-      </div>
-      <div class="rotation-controls">
-        <button type="button" data-shift="earlier">← ${copy.earlier}</button>
-        <span data-rotation-label>${copy.rotation} ${formatRotation(loadRotationOffset())}</span>
-        <button type="button" data-shift="later">${copy.later} →</button>
-      </div>
-    </div>
-    <div class="schedule-adjust-section">
-      <div>
-        <strong>${copy.focusTitle}</strong>
-        <p>${copy.focusNote}</p>
-      </div>
-      <div class="focus-grid"></div>
-    </div>
-    <button class="reset-adjustments" type="button">${copy.reset}</button>
-  `;
+  panel.className = "weekly-adjust-modal";
 
-  const dayCounts = card.querySelector(".day-counts");
-  dayCounts?.after(panel);
+  const header = document.createElement("div");
+  header.className = "weekly-adjust-modal-header";
 
-  panel.querySelector<HTMLButtonElement>('[data-shift="earlier"]')?.addEventListener("click", () => {
-    saveRotationOffset(loadRotationOffset() - 1);
-    refreshCard(card, isZh);
-  });
+  const titleBlock = document.createElement("div");
+  const editorTitle = document.createElement("strong");
+  editorTitle.textContent = copy.editorTitle;
+  const editorHint = document.createElement("span");
+  editorHint.textContent = copy.editorHint;
+  titleBlock.append(editorTitle, editorHint);
 
-  panel.querySelector<HTMLButtonElement>('[data-shift="later"]')?.addEventListener("click", () => {
-    saveRotationOffset(loadRotationOffset() + 1);
-    refreshCard(card, isZh);
-  });
+  const closeButton = document.createElement("button");
+  closeButton.type = "button";
+  closeButton.className = "weekly-adjust-done";
+  closeButton.textContent = copy.done;
 
-  panel.querySelector<HTMLButtonElement>(".reset-adjustments")?.addEventListener("click", () => {
+  const grid = document.createElement("div");
+  grid.className = "weekly-adjust-grid";
+
+  const close = () => {
+    document.body.classList.remove("weekly-adjust-open");
+    overlay.classList.add("is-closing");
+    window.setTimeout(() => overlay.remove(), 160);
+    document.removeEventListener("keydown", handleKeydown);
+  };
+
+  const rerender = () => {
+    renderEditorGrid(grid, card, baseItems, isZh, beginSwipe, moveSwipe, endSwipe);
+    renderAdjustedSchedule(card, Array.from(card.querySelectorAll<HTMLElement>(".schedule-row")), baseItems, isZh);
+  };
+
+  const shiftBy = (delta: number) => {
+    saveRotationOffset(loadRotationOffset() + delta);
+    rerender();
+  };
+
+  function beginSwipe(event: PointerEvent): void {
+    activePointerId = event.pointerId;
+    startY = event.clientY;
+    startOffset = loadRotationOffset();
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    grid.classList.add("is-swiping");
+  }
+
+  function moveSwipe(event: PointerEvent): void {
+    if (activePointerId !== event.pointerId) return;
+    const offset = Math.trunc((event.clientY - startY) / SWIPE_THRESHOLD_PX);
+    const nextOffset = startOffset + offset;
+
+    if (nextOffset !== loadRotationOffset()) {
+      saveRotationOffset(nextOffset);
+      rerender();
+    }
+  }
+
+  function endSwipe(event: PointerEvent): void {
+    if (activePointerId !== event.pointerId) return;
+    activePointerId = null;
+    grid.classList.remove("is-swiping");
+  }
+
+  function handleKeydown(event: KeyboardEvent): void {
+    if (event.key === "Escape") close();
+    if (event.key === "ArrowUp") shiftBy(-1);
+    if (event.key === "ArrowDown") shiftBy(1);
+  }
+
+  const tools = document.createElement("div");
+  tools.className = "weekly-adjust-tools";
+
+  const upButton = document.createElement("button");
+  upButton.type = "button";
+  upButton.textContent = "↑";
+  upButton.setAttribute("aria-label", copy.moveUp);
+  upButton.addEventListener("click", () => shiftBy(-1));
+
+  const downButton = document.createElement("button");
+  downButton.type = "button";
+  downButton.textContent = "↓";
+  downButton.setAttribute("aria-label", copy.moveDown);
+  downButton.addEventListener("click", () => shiftBy(1));
+
+  const resetButton = document.createElement("button");
+  resetButton.type = "button";
+  resetButton.textContent = copy.reset;
+  resetButton.addEventListener("click", () => {
     saveRotationOffset(0);
     saveFocusByDay({});
-    refreshCard(card, isZh);
+    rerender();
   });
+
+  tools.append(upButton, downButton, resetButton);
+  header.append(titleBlock, closeButton);
+  panel.append(header, grid, tools);
+  overlay.append(backdrop, panel);
+  document.body.append(overlay);
+  document.body.classList.add("weekly-adjust-open");
+
+  backdrop.addEventListener("click", close);
+  closeButton.addEventListener("click", close);
+  document.addEventListener("keydown", handleKeydown);
+
+  rerender();
 }
 
-function refreshCard(card: HTMLElement, isZh: boolean): void {
-  const rows = Array.from(card.querySelectorAll<HTMLElement>(".schedule-row"));
-  const baseItems = readBaseItems(rows);
-  renderAdjustedSchedule(card, rows, baseItems, isZh);
-  renderFocusControls(card, baseItems, isZh);
-}
-
-function renderFocusControls(card: HTMLElement, baseItems: ScheduleItem[], isZh: boolean): void {
-  const grid = card.querySelector<HTMLElement>(".focus-grid");
-  if (!grid) return;
-
-  const focusByDay = loadFocusByDay();
-  const nextSignature = `${isZh ? "zh" : "en"}|${buildBaseSignature(baseItems)}|${JSON.stringify(focusByDay)}`;
-  if (grid.dataset.focusSignature === nextSignature) return;
-
-  grid.dataset.focusSignature = nextSignature;
+function renderEditorGrid(
+  grid: HTMLElement,
+  card: HTMLElement,
+  baseItems: ScheduleItem[],
+  isZh: boolean,
+  beginSwipe: (event: PointerEvent) => void,
+  moveSwipe: (event: PointerEvent) => void,
+  endSwipe: (event: PointerEvent) => void
+): void {
+  const copy = getCopy(isZh);
+  const adjustedItems = buildAdjustedItems(baseItems, isZh);
   grid.innerHTML = "";
 
-  baseItems.forEach((item) => {
-    const focusKey = focusByDay[item.day] ?? inferTrainingFocus(item.note);
-    const label = document.createElement("label");
-    label.className = "focus-row";
+  const dateHead = document.createElement("span");
+  dateHead.textContent = copy.date;
+  const carbHead = document.createElement("span");
+  carbHead.textContent = copy.carb;
+  const focusHead = document.createElement("span");
+  focusHead.textContent = copy.focus;
+  grid.append(dateHead, carbHead, focusHead);
 
-    const day = document.createElement("span");
-    day.textContent = item.day;
+  adjustedItems.forEach((item) => {
+    const dayCell = document.createElement("div");
+    dayCell.className = "weekly-date-cell";
+    dayCell.textContent = item.day;
+
+    const carbCell = document.createElement("button");
+    carbCell.className = `weekly-carb-cell ${item.type.toLowerCase()}`;
+    carbCell.type = "button";
+    carbCell.textContent = item.type;
+    carbCell.addEventListener("pointerdown", beginSwipe);
+    carbCell.addEventListener("pointermove", moveSwipe);
+    carbCell.addEventListener("pointerup", endSwipe);
+    carbCell.addEventListener("pointercancel", endSwipe);
+    carbCell.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      saveRotationOffset(loadRotationOffset() + (event.deltaY > 0 ? 1 : -1));
+      renderEditorGrid(grid, card, baseItems, isZh, beginSwipe, moveSwipe, endSwipe);
+      renderAdjustedSchedule(card, Array.from(card.querySelectorAll<HTMLElement>(".schedule-row")), baseItems, isZh);
+    }, { passive: false });
 
     const select = document.createElement("select");
-    select.value = focusKey;
-
+    select.className = "weekly-focus-select";
+    select.value = item.focusKey;
     TRAINING_OPTIONS.forEach((option) => {
       const optionElement = document.createElement("option");
       optionElement.value = option;
       optionElement.textContent = getFocusLabel(option, isZh);
       select.append(optionElement);
     });
-
     select.addEventListener("change", () => {
       const nextFocus = loadFocusByDay();
       nextFocus[item.day] = select.value as TrainingFocusKey;
       saveFocusByDay(nextFocus);
-      refreshCard(card, isZh);
+      renderEditorGrid(grid, card, baseItems, isZh, beginSwipe, moveSwipe, endSwipe);
+      renderAdjustedSchedule(card, Array.from(card.querySelectorAll<HTMLElement>(".schedule-row")), baseItems, isZh);
     });
 
-    label.append(day, select);
-    grid.append(label);
+    grid.append(dayCell, carbCell, select);
   });
 }
 
@@ -216,26 +309,30 @@ function renderAdjustedSchedule(
   baseItems: ScheduleItem[],
   isZh: boolean
 ): void {
-  const types = rotateCarbTypes(baseItems.map((item) => item.type), loadRotationOffset());
-  const focusByDay = loadFocusByDay();
-  const rotationLabel = card.querySelector<HTMLElement>("[data-rotation-label]");
-  const copy = getCopy(isZh);
-
-  setTextIfChanged(rotationLabel, `${copy.rotation} ${formatRotation(loadRotationOffset())}`);
+  const adjustedItems = buildAdjustedItems(baseItems, isZh);
 
   rows.forEach((row, index) => {
-    const item = baseItems[index];
-    const type = types[index];
-    const focusKey = focusByDay[item.day] ?? inferTrainingFocus(item.note);
+    const item = adjustedItems[index];
     const typeElement = row.querySelector<HTMLElement>(".day-type");
     const noteElement = row.querySelector<HTMLElement>(".small-note");
 
-    setTextIfChanged(typeElement, type);
-    if (typeElement) typeElement.className = `day-type ${type.toLowerCase()}`;
-    setTextIfChanged(noteElement, getFocusLabel(focusKey, isZh));
+    setTextIfChanged(typeElement, item.type);
+    if (typeElement) typeElement.className = `day-type ${item.type.toLowerCase()}`;
+    setTextIfChanged(noteElement, getFocusLabel(item.focusKey, isZh));
   });
 
   card.dataset.renderedAdjustedSignature = buildCurrentRenderedSignature(rows);
+}
+
+function buildAdjustedItems(baseItems: ScheduleItem[], isZh: boolean): AdjustedScheduleItem[] {
+  const rotatedTypes = rotateCarbTypes(baseItems.map((item) => item.type), loadRotationOffset());
+  const focusByDay = loadFocusByDay();
+
+  return baseItems.map((item, index) => ({
+    ...item,
+    type: rotatedTypes[index],
+    focusKey: focusByDay[item.day] ?? inferTrainingFocus(item.note)
+  }));
 }
 
 function readBaseItems(rows: HTMLElement[]): ScheduleItem[] {
@@ -332,11 +429,6 @@ function saveFocusByDay(value: Record<string, TrainingFocusKey>): void {
   window.localStorage.setItem(FOCUS_KEY, JSON.stringify(value));
 }
 
-function formatRotation(offset: number): string {
-  if (offset === 0) return "0";
-  return offset > 0 ? `+${offset}` : String(offset);
-}
-
 function buildBaseSignature(items: ScheduleItem[]): string {
   return items.map((item) => `${item.day}:${item.type}:${item.note}`).join("|");
 }
@@ -349,25 +441,27 @@ function isWeeklyStructureTitle(value: string | null): boolean {
 function getCopy(isZh: boolean) {
   if (isZh) {
     return {
-      rotationTitle: "碳水日循环位移",
-      rotationNote: "日期固定不动，只移动高 / 中 / 低碳日的排列，让高碳日对齐真正的重训练日。",
-      earlier: "提前",
-      later: "延后",
-      rotation: "当前位移",
-      focusTitle: "训练部位",
-      focusNote: "每个日期的训练部位可以独立调整，不改变日期顺序。",
-      reset: "恢复默认结构"
+      editorTitle: "调整一周结构",
+      editorHint: "日期固定；上下滑动碳水列进行循环微调。",
+      done: "完成",
+      reset: "恢复默认",
+      date: "日期",
+      carb: "碳水",
+      focus: "训练部位",
+      moveUp: "上移碳水序列",
+      moveDown: "下移碳水序列"
     };
   }
 
   return {
-    rotationTitle: "Carb day rotation",
-    rotationNote: "Dates stay fixed. Only the high / medium / low sequence rotates so high-carb days can match real hard sessions.",
-    earlier: "Earlier",
-    later: "Later",
-    rotation: "Offset",
-    focusTitle: "Training focus",
-    focusNote: "Training focus can be changed for each fixed day without moving the date order.",
-    reset: "Reset default structure"
+    editorTitle: "Adjust weekly structure",
+    editorHint: "Dates stay fixed; swipe the carb column to rotate the sequence.",
+    done: "Done",
+    reset: "Reset",
+    date: "Date",
+    carb: "Carb",
+    focus: "Training Focus",
+    moveUp: "Move carb sequence up",
+    moveDown: "Move carb sequence down"
   };
 }
