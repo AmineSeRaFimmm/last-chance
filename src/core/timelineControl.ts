@@ -167,13 +167,27 @@ function renderRiskPanel(panel: HTMLElement, risk: TimelineRisk): void {
 }
 
 function setSaveBlocked(button: HTMLButtonElement, blocked: boolean, blockedText: string): void {
-  if (!button.dataset.originalText) {
-    button.dataset.originalText = button.textContent || "Save plan locally";
+  if (blocked) {
+    if (button.dataset.timelineBlocked !== "true") {
+      button.dataset.preTimelineText = button.textContent || "Save plan locally";
+    }
+
+    button.disabled = true;
+    button.dataset.timelineBlocked = "true";
+    button.classList.add("timeline-save-blocked");
+    button.textContent = blockedText;
+    return;
   }
 
-  button.disabled = blocked;
-  button.classList.toggle("timeline-save-blocked", blocked);
-  button.textContent = blocked ? blockedText : button.dataset.originalText;
+  button.disabled = false;
+  button.classList.remove("timeline-save-blocked");
+
+  if (button.dataset.timelineBlocked === "true" && button.dataset.preTimelineText) {
+    button.textContent = button.dataset.preTimelineText;
+  }
+
+  delete button.dataset.timelineBlocked;
+  delete button.dataset.preTimelineText;
 }
 
 function setReactInputValue(input: HTMLInputElement | null, value: string): void {
