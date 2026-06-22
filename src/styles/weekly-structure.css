@@ -118,6 +118,10 @@ body.weekly-adjust-open {
   border: 1px solid rgba(17, 17, 17, 0.045);
 }
 
+.weekly-adjust-row-fragment {
+  display: contents;
+}
+
 .weekly-adjust-grid > span {
   position: sticky;
   top: 0;
