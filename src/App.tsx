@@ -806,11 +806,14 @@ function buildTimelineProjection(
   const totalWeeks = hasWeightTarget
     ? Math.min(MAX_TIMELINE_WEEKS, Math.max(MIN_TIMELINE_WEEKS, Math.round(expectedTimelineWeeks)))
     : DEFAULT_TIMELINE_WEEKS;
+  const target = hasWeightTarget ? targetWeightKg : undefined;
+  const projectionWeeklyLossKg =
+    target !== undefined ? (currentWeightKg - target) / totalWeeks : weeklyLossKg;
 
   return Array.from({ length: totalWeeks }, (_, index) => {
     const week = index + 1;
-    const rawWeight = currentWeightKg - weeklyLossKg * week;
-    const weightKg = hasWeightTarget ? Math.max(rawWeight, targetWeightKg) : rawWeight;
+    const rawWeight = currentWeightKg - projectionWeeklyLossKg * week;
+    const weightKg = target !== undefined ? Math.max(rawWeight, target) : rawWeight;
 
     return {
       week,
