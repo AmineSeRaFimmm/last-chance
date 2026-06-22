@@ -9,6 +9,7 @@ export interface UserInput {
   heightCm: number;
   weightKg: number;
   targetWeightKg?: number;
+  expectedTimelineWeeks?: number;
   activityFactor: number;
   trainingDaysPerWeek: number;
   goalRatePctPerWeek: number;
