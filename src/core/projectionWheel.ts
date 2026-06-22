@@ -79,11 +79,7 @@ function openProjectionFocus(items: ProjectionItem[]): void {
   const weight = document.createElement("div");
   weight.className = "projection-focus-weight";
 
-  const hint = document.createElement("div");
-  hint.className = "projection-focus-hint";
-  hint.textContent = "Swipe to browse weeks";
-
-  card.append(week, weight, hint);
+  card.append(week, weight);
   overlay.append(backdrop, card);
   document.body.appendChild(overlay);
   document.body.classList.add("projection-focus-open");
