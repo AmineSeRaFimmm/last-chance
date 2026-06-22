@@ -62,7 +62,7 @@ function setupTimelineControl(): void {
   }
 
   const label = timelineField.querySelector<HTMLLabelElement>(".timeline-label");
-  if (label) label.textContent = copy.timeline;
+  if (label && label.textContent !== copy.timeline) label.textContent = copy.timeline;
 
   let riskPanel = document.querySelector<HTMLElement>(".timeline-risk-panel");
   if (!riskPanel) {
@@ -162,6 +162,17 @@ function evaluateTimelineRisk(weightKg: number, targetWeightKg: number, weeks: n
 }
 
 function renderRiskPanel(panel: HTMLElement, risk: TimelineRisk): void {
+  if (
+    panel.dataset.status === risk.status &&
+    panel.dataset.title === risk.title &&
+    panel.dataset.detail === risk.detail
+  ) {
+    return;
+  }
+
+  panel.dataset.status = risk.status;
+  panel.dataset.title = risk.title;
+  panel.dataset.detail = risk.detail;
   panel.className = `timeline-risk-panel ${risk.status}`;
   panel.innerHTML = `<strong>${risk.title}</strong><span>${risk.detail}</span>`;
 }
@@ -169,7 +180,7 @@ function renderRiskPanel(panel: HTMLElement, risk: TimelineRisk): void {
 function setPlanActionsBlocked(saveButton: HTMLButtonElement, blocked: boolean, blockedText: string): void {
   setSaveBlocked(saveButton, blocked, blockedText);
   document.querySelectorAll<HTMLButtonElement>(".button-row .secondary-button").forEach((button) => {
-    button.disabled = blocked;
+    if (button.disabled !== blocked) button.disabled = blocked;
     button.classList.toggle("timeline-save-blocked", blocked);
   });
 }
