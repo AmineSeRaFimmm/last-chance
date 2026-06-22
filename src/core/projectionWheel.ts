@@ -5,6 +5,9 @@ interface ProjectionItem {
   weight: string;
 }
 
+const PIXELS_PER_WEEK = 34;
+const FLICK_VELOCITY = 0.65;
+
 export function installProjectionWheel(): void {
   if (installed || typeof document === "undefined") return;
   installed = true;
@@ -48,7 +51,11 @@ function openProjectionFocus(items: ProjectionItem[]): void {
   if (previousOverlay) previousOverlay.remove();
 
   let activeIndex = 0;
+  let startIndex = 0;
   let startY = 0;
+  let lastY = 0;
+  let startTime = 0;
+  let dragging = false;
   const reducedMotion = prefersReducedMotion();
 
   const overlay = document.createElement("div");
@@ -74,20 +81,20 @@ function openProjectionFocus(items: ProjectionItem[]): void {
 
   const hint = document.createElement("div");
   hint.className = "projection-focus-hint";
-  hint.textContent = "Swipe up / down";
+  hint.textContent = "Swipe to browse weeks";
 
   card.append(week, weight, hint);
   overlay.append(backdrop, card);
   document.body.appendChild(overlay);
   document.body.classList.add("projection-focus-open");
 
-  const render = (direction: "up" | "down" | "none" = "none") => {
+  const render = (direction: "up" | "down" | "none" = "none", animate = true) => {
     const item = items[activeIndex];
     week.textContent = item.week;
     weight.textContent = item.weight;
     card.dataset.direction = direction;
 
-    if (!reducedMotion) {
+    if (!reducedMotion && animate) {
       card.classList.remove("projection-focus-animate");
       void card.offsetWidth;
       card.classList.add("projection-focus-animate");
@@ -101,11 +108,17 @@ function openProjectionFocus(items: ProjectionItem[]): void {
     document.removeEventListener("keydown", handleKeydown);
   };
 
+  const setIndex = (nextIndex: number, animate = true) => {
+    const clampedIndex = clamp(nextIndex, 0, items.length - 1);
+    if (clampedIndex === activeIndex) return;
+
+    const direction = clampedIndex > activeIndex ? "up" : "down";
+    activeIndex = clampedIndex;
+    render(direction, animate);
+  };
+
   const move = (delta: number) => {
-    const nextIndex = Math.min(items.length - 1, Math.max(0, activeIndex + delta));
-    if (nextIndex === activeIndex) return;
-    activeIndex = nextIndex;
-    render(delta > 0 ? "up" : "down");
+    setIndex(activeIndex + delta);
   };
 
   const handleKeydown = (event: KeyboardEvent) => {
@@ -116,16 +129,51 @@ function openProjectionFocus(items: ProjectionItem[]): void {
 
   backdrop.addEventListener("click", close);
   card.addEventListener("pointerdown", (event) => {
+    dragging = true;
     startY = event.clientY;
+    lastY = event.clientY;
+    startIndex = activeIndex;
+    startTime = performance.now();
+    card.classList.add("is-dragging");
+    card.setPointerCapture(event.pointerId);
   });
+
+  card.addEventListener("pointermove", (event) => {
+    if (!dragging) return;
+
+    lastY = event.clientY;
+    const offset = Math.trunc((startY - event.clientY) / PIXELS_PER_WEEK);
+    setIndex(startIndex + offset, false);
+  });
+
   card.addEventListener("pointerup", (event) => {
-    const deltaY = event.clientY - startY;
-    if (deltaY < -18) move(1);
-    if (deltaY > 18) move(-1);
+    if (!dragging) return;
+
+    dragging = false;
+    card.classList.remove("is-dragging");
+    card.releasePointerCapture(event.pointerId);
+
+    const elapsed = Math.max(1, performance.now() - startTime);
+    const deltaY = startY - lastY;
+    const velocity = deltaY / elapsed;
+    const baseOffset = Math.round(deltaY / PIXELS_PER_WEEK);
+    const momentum = Math.abs(velocity) > FLICK_VELOCITY ? Math.sign(velocity) * 2 : 0;
+    const finalOffset = baseOffset + momentum;
+
+    if (finalOffset !== 0) {
+      setIndex(startIndex + finalOffset, true);
+    }
   });
+
+  card.addEventListener("pointercancel", () => {
+    dragging = false;
+    card.classList.remove("is-dragging");
+  });
+
   card.addEventListener("wheel", (event) => {
     event.preventDefault();
-    move(event.deltaY > 0 ? 1 : -1);
+    const wheelDelta = Math.max(-3, Math.min(3, Math.round(event.deltaY / 36)));
+    if (wheelDelta !== 0) move(wheelDelta);
   }, { passive: false });
   document.addEventListener("keydown", handleKeydown);
 
@@ -148,6 +196,10 @@ function setActiveRow(rows: HTMLElement[], activeIndex: number): void {
     row.classList.toggle("is-active", isActive);
     row.setAttribute("aria-hidden", isActive ? "false" : "true");
   });
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
 }
 
 function prefersReducedMotion(): boolean {
