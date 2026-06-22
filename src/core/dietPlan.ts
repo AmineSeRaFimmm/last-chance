@@ -36,15 +36,11 @@ const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 const proteins: FoodItem[] = [
   { name: "Chicken breast", kcal: 165, protein: 31, carbs: 0, fat: 3.6 },
-  { name: "Turkey breast", kcal: 135, protein: 30, carbs: 0, fat: 1 },
   { name: "Lean beef", kcal: 176, protein: 26, carbs: 0, fat: 8 },
-  { name: "Salmon", kcal: 208, protein: 20, carbs: 0, fat: 13 },
-  { name: "Cod", kcal: 82, protein: 18, carbs: 0, fat: 0.7 },
   { name: "Shrimp", kcal: 99, protein: 24, carbs: 0.2, fat: 0.3 },
   { name: "Tuna", kcal: 132, protein: 29, carbs: 0, fat: 1 },
   { name: "Egg whites", kcal: 52, protein: 11, carbs: 0.7, fat: 0.2 },
-  { name: "Whole eggs", kcal: 143, protein: 13, carbs: 0.7, fat: 9.5 },
-  { name: "Firm tofu", kcal: 144, protein: 17, carbs: 3, fat: 8 }
+  { name: "Whole eggs", kcal: 143, protein: 13, carbs: 0.7, fat: 9.5 }
 ];
 
 const carbs: FoodItem[] = [
@@ -55,18 +51,14 @@ const carbs: FoodItem[] = [
   { name: "Sweet potato", kcal: 86, protein: 1.6, carbs: 20, fat: 0.1 },
   { name: "Oats", kcal: 389, protein: 16.9, carbs: 66, fat: 6.9 },
   { name: "Whole wheat bread", kcal: 247, protein: 13, carbs: 41, fat: 4.2 },
-  { name: "Quinoa", kcal: 120, protein: 4.4, carbs: 21, fat: 1.9 },
-  { name: "Corn", kcal: 96, protein: 3.4, carbs: 21, fat: 1.5 },
-  { name: "Cooked lentils", kcal: 116, protein: 9, carbs: 20, fat: 0.4 }
+  { name: "Corn", kcal: 96, protein: 3.4, carbs: 21, fat: 1.5 }
 ];
 
 const vegetables: FoodItem[] = [
   { name: "Broccoli", kcal: 35, protein: 2.4, carbs: 7, fat: 0.4 },
   { name: "Spinach", kcal: 23, protein: 2.9, carbs: 3.6, fat: 0.4 },
-  { name: "Asparagus", kcal: 20, protein: 2.2, carbs: 3.9, fat: 0.1 },
   { name: "Zucchini", kcal: 17, protein: 1.2, carbs: 3.1, fat: 0.3 },
   { name: "Mushrooms", kcal: 22, protein: 3.1, carbs: 3.3, fat: 0.3 },
-  { name: "Green beans", kcal: 31, protein: 1.8, carbs: 7, fat: 0.1 },
   { name: "Cauliflower", kcal: 25, protein: 1.9, carbs: 5, fat: 0.3 },
   { name: "Carrots", kcal: 41, protein: 0.9, carbs: 10, fat: 0.2 },
   { name: "Cucumber", kcal: 15, protein: 0.7, carbs: 3.6, fat: 0.1 },
@@ -92,7 +84,6 @@ const fats: FoodItem[] = [
 
 const dairy: FoodItem[] = [
   { name: "Greek yogurt", kcal: 73, protein: 10, carbs: 3.9, fat: 1.9 },
-  { name: "Cottage cheese", kcal: 98, protein: 11, carbs: 3.4, fat: 4.3 },
   { name: "Skim milk", kcal: 34, protein: 3.4, carbs: 5, fat: 0.1 },
   { name: "Soy milk", kcal: 54, protein: 3.3, carbs: 6, fat: 1.8 }
 ];
