@@ -1,0 +1,128 @@
+.segmented.three {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.diet-hero {
+  padding-top: 20px;
+}
+
+.diet-note-card {
+  margin-top: 4px;
+}
+
+.diet-week-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.diet-day-card {
+  overflow: hidden;
+}
+
+.diet-day-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.diet-day-head strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 24px;
+  letter-spacing: -0.05em;
+}
+
+.diet-day-target {
+  display: grid;
+  gap: 4px;
+  justify-items: end;
+  text-align: right;
+}
+
+.diet-day-target span,
+.diet-total-line span,
+.diet-meal-head span,
+.diet-macro-line span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.diet-day-target strong {
+  margin: 0;
+  font-size: 18px;
+}
+
+.diet-meal-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.diet-meal {
+  background: #f5f5f7;
+  border-radius: 20px;
+  padding: 14px;
+}
+
+.diet-meal-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.diet-meal-head strong {
+  font-size: 15px;
+}
+
+.diet-food-list {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.diet-food-list span {
+  display: inline-flex;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.diet-macro-line,
+.diet-total-line {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.diet-total-line {
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  align-items: center;
+}
+
+.diet-total-line strong {
+  font-size: 14px;
+}
+
+.no-margin {
+  margin: 0;
+}
+
+@media (max-width: 420px) {
+  .diet-day-head {
+    flex-direction: column;
+  }
+
+  .diet-day-target {
+    justify-items: start;
+    text-align: left;
+  }
+}
