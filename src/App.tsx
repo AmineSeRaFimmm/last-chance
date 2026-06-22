@@ -71,19 +71,12 @@ const copy = {
     highNote:
       "High-carb days should be assigned to the hardest sessions, not to uncontrolled cheat meals.",
     safety: "Safety notes",
-    install: "Install",
-    installNote: "iPhone: open this site in Safari, tap Share, then Add to Home Screen.",
-    disclaimer:
-      "Last Chance is not medical advice. If pregnant, breastfeeding, under 18, diagnosed with diabetes, kidney disease, eating disorder, or using medication affecting appetite or blood glucose, seek professional guidance first.",
     projection: "Target timeline projection",
     projectionNote:
       "When a target weight is set, this projection follows your expected timeline. If no target is set, it falls back to 12 weeks.",
     week: "Week",
     projectedWeight: "Projected weight",
     expectedLoss: "Expected loss",
-    export: "Export",
-    exportJson: "Download JSON",
-    exportCsv: "Download CSV",
     weeklyCheck: "Weekly calorie check",
     targetWeeklyCalories: "Target weekly calories",
     allocatedWeeklyCalories: "Allocated weekly calories",
@@ -141,18 +134,11 @@ const copy = {
     weeklyStructure: "一周结构",
     highNote: "高碳日应该给最重的训练日，不是用来失控放纵。",
     safety: "安全提示",
-    install: "安装",
-    installNote: "iPhone：用 Safari 打开，点击分享，然后选择添加到主屏幕。",
-    disclaimer:
-      "Last Chance 不是医疗建议。孕期、哺乳期、未成年人、糖尿病、肾脏疾病、进食障碍史，或正在使用影响食欲/血糖药物的人，应先咨询专业人士。",
     projection: "目标时间预测",
     projectionNote: "设置目标体重后，预测长度会跟随期待完成用时；未设置目标体重时，默认显示 12 周。",
     week: "周数",
     projectedWeight: "预测体重",
     expectedLoss: "预计下降",
-    export: "导出",
-    exportJson: "下载 JSON",
-    exportCsv: "下载 CSV",
     weeklyCheck: "周热量核验",
     targetWeeklyCalories: "目标周热量",
     allocatedWeeklyCalories: "分配周热量",
@@ -217,8 +203,6 @@ export default function App() {
 
   const projection = useMemo(() => buildTimelineProjection(weightKg, result.weeklyLossKg, targetWeightKg, expectedTimelineWeeks), [weightKg, result.weeklyLossKg, targetWeightKg, expectedTimelineWeeks]);
 
-  const exportPayload = useMemo(() => ({ app: "Last Chance", generatedAt: new Date().toISOString(), input, timelineRisk, result, projection }), [input, timelineRisk, result, projection]);
-
   useEffect(() => setSaved(false), [result, timelineRisk]);
 
   function handleLanguageChange(nextLanguage: Language) {
@@ -240,16 +224,6 @@ export default function App() {
     if (timelineRisk.blocked) return;
     saveInput(input);
     setSaved(true);
-  }
-
-  function handleDownloadJson() {
-    if (timelineRisk.blocked) return;
-    downloadTextFile("last-chance-plan.json", JSON.stringify(exportPayload, null, 2), "application/json");
-  }
-
-  function handleDownloadCsv() {
-    if (timelineRisk.blocked) return;
-    downloadTextFile("last-chance-plan.csv", buildCsv(input, timelineRisk, result, projection), "text/csv");
   }
 
   return (
@@ -348,14 +322,6 @@ export default function App() {
         <p className="small-note">{t.projectionNote}</p>
       </section>
 
-      <section className="card">
-        <div className="card-title">{t.export}</div>
-        <div className="button-row">
-          <button className="secondary-button" disabled={timelineRisk.blocked} type="button" onClick={handleDownloadJson}>{t.exportJson}</button>
-          <button className="secondary-button" disabled={timelineRisk.blocked} type="button" onClick={handleDownloadCsv}>{t.exportCsv}</button>
-        </div>
-      </section>
-
       {result.kind === "carbCycling" && <CarbCyclingWeeklyStructure result={result} labels={t} />}
 
       <section className="card">
@@ -369,12 +335,6 @@ export default function App() {
           {result.warnings.map((warning) => <div className="warning" key={warning}>{warning}</div>)}
         </section>
       )}
-
-      <section className="card">
-        <div className="card-title">{t.install}</div>
-        <p className="small-note">{t.installNote}</p>
-        <p className="small-note">{t.disclaimer}</p>
-      </section>
     </main>
   );
 }
@@ -486,60 +446,4 @@ function buildTimelineProjection(currentWeightKg: number, weeklyLossKg: number, 
     const weightKg = target !== undefined ? Math.max(rawWeight, target) : rawWeight;
     return { week, weightKg };
   });
-}
-
-function downloadTextFile(filename: string, content: string, mimeType: string) {
-  const blob = new Blob([content], { type: `${mimeType};charset=utf-8` });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
-}
-
-function buildCsv(input: UserInput, timelineRisk: TimelineRisk, result: PlanResult, projection: { week: number; weightKg: number }[]): string {
-  const lines: string[] = [];
-  lines.push("section,key,value");
-  lines.push(`input,sex,${input.sex}`);
-  lines.push(`input,planType,${input.planType}`);
-  lines.push(`input,age,${input.age}`);
-  lines.push(`input,heightCm,${input.heightCm}`);
-  lines.push(`input,weightKg,${input.weightKg}`);
-  lines.push(`input,targetWeightKg,${input.targetWeightKg ?? ""}`);
-  lines.push(`input,expectedTimelineWeeks,${input.expectedTimelineWeeks}`);
-  lines.push(`input,activityFactor,${input.activityFactor}`);
-  lines.push(`input,trainingDaysPerWeek,${input.trainingDaysPerWeek}`);
-  lines.push(`input,goalRatePctPerWeek,${input.goalRatePctPerWeek}`);
-  lines.push(`input,proteinFactor,${input.proteinFactor}`);
-  lines.push(`timeline,status,${timelineRisk.status}`);
-  lines.push(`timeline,blocked,${timelineRisk.blocked}`);
-  lines.push(`result,rmr,${result.rmr}`);
-  lines.push(`result,tdee,${result.tdee}`);
-  lines.push(`result,dailyDeficitKcal,${result.dailyDeficitKcal}`);
-  lines.push(`result,weeklyLossKg,${result.weeklyLossKg}`);
-
-  if (result.kind === "standard") {
-    appendMacroCsv(lines, "daily", result.daily);
-  } else {
-    appendMacroCsv(lines, "highDay", result.highDay);
-    appendMacroCsv(lines, "mediumDay", result.mediumDay);
-    appendMacroCsv(lines, "lowDay", result.lowDay);
-    lines.push(`carbCycle,highDays,${result.dayCounts.high}`);
-    lines.push(`carbCycle,mediumDays,${result.dayCounts.medium}`);
-    lines.push(`carbCycle,lowDays,${result.dayCounts.low}`);
-    lines.push(`carbCycle,weeklyCalories,${result.weeklyCalories}`);
-  }
-
-  projection.forEach((row) => lines.push(`projection,week_${row.week},${row.weightKg.toFixed(1)}`));
-  return lines.join("\n");
-}
-
-function appendMacroCsv(lines: string[], prefix: string, macro: MacroResult) {
-  lines.push(`${prefix},calories,${macro.calories}`);
-  lines.push(`${prefix},proteinG,${macro.proteinG}`);
-  lines.push(`${prefix},fatG,${macro.fatG}`);
-  lines.push(`${prefix},carbsG,${macro.carbsG}`);
 }
