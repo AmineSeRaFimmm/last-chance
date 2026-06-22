@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import CarbCyclingWeeklyStructure from "./components/CarbCyclingWeeklyStructure";
 import type { MacroResult, PlanResult, PlanType, Sex, UserInput } from "./core/types";
 import { buildSafeCarbCyclingPlan as buildCarbCyclingPlan } from "./core/carbCyclingSafePlan";
 import { ACTIVITY_LEVELS, DEFAULT_INPUTS } from "./core/constants";
@@ -179,35 +180,20 @@ export default function App() {
 
   const [language, setLanguage] = useState<Language>(loadLanguage());
   const [sex, setSex] = useState<Sex>(savedInput?.sex ?? "male");
-  const [planType, setPlanType] = useState<PlanType>(
-    savedInput?.planType ?? "standard"
-  );
+  const [planType, setPlanType] = useState<PlanType>(savedInput?.planType ?? "standard");
   const [age, setAge] = useState(savedInput?.age ?? 30);
   const [heightCm, setHeightCm] = useState(savedInput?.heightCm ?? 175);
   const [weightKg, setWeightKg] = useState(savedInput?.weightKg ?? 80);
-  const [targetWeightKg, setTargetWeightKg] = useState<number | undefined>(
-    savedInput?.targetWeightKg
-  );
-  const [expectedTimelineWeeks, setExpectedTimelineWeeks] = useState(
-    savedInput?.expectedTimelineWeeks ?? DEFAULT_TIMELINE_WEEKS
-  );
-  const [activityFactor, setActivityFactor] = useState(
-    savedInput?.activityFactor ?? 1.5
-  );
-  const [trainingDaysPerWeek, setTrainingDaysPerWeek] = useState(
-    savedInput?.trainingDaysPerWeek ?? 4
-  );
-  const [proteinFactor, setProteinFactor] = useState(
-    savedInput?.proteinFactor ?? DEFAULT_INPUTS.male.proteinFactor
-  );
+  const [targetWeightKg, setTargetWeightKg] = useState<number | undefined>(savedInput?.targetWeightKg);
+  const [expectedTimelineWeeks, setExpectedTimelineWeeks] = useState(savedInput?.expectedTimelineWeeks ?? DEFAULT_TIMELINE_WEEKS);
+  const [activityFactor, setActivityFactor] = useState(savedInput?.activityFactor ?? 1.5);
+  const [trainingDaysPerWeek, setTrainingDaysPerWeek] = useState(savedInput?.trainingDaysPerWeek ?? 4);
+  const [proteinFactor, setProteinFactor] = useState(savedInput?.proteinFactor ?? DEFAULT_INPUTS.male.proteinFactor);
   const [saved, setSaved] = useState(false);
 
   const t = copy[language];
   const effectivePlanType: PlanType = sex === "female" ? "standard" : planType;
-  const timelineRisk = useMemo(
-    () => buildTimelineRisk(weightKg, targetWeightKg, expectedTimelineWeeks, t),
-    [weightKg, targetWeightKg, expectedTimelineWeeks, t]
-  );
+  const timelineRisk = useMemo(() => buildTimelineRisk(weightKg, targetWeightKg, expectedTimelineWeeks, t), [weightKg, targetWeightKg, expectedTimelineWeeks, t]);
   const goalRatePctPerWeek = timelineRisk.planRate ?? DEFAULT_INPUTS[sex].goalRatePctPerWeek;
 
   const input: UserInput = {
@@ -225,45 +211,15 @@ export default function App() {
   };
 
   const result = useMemo<PlanResult>(() => {
-    if (sex === "male" && effectivePlanType === "carbCycling") {
-      return buildCarbCyclingPlan(input);
-    }
-
+    if (sex === "male" && effectivePlanType === "carbCycling") return buildCarbCyclingPlan(input);
     return buildStandardPlan(input);
-  }, [
-    sex,
-    effectivePlanType,
-    age,
-    heightCm,
-    weightKg,
-    targetWeightKg,
-    expectedTimelineWeeks,
-    activityFactor,
-    trainingDaysPerWeek,
-    goalRatePctPerWeek,
-    proteinFactor
-  ]);
+  }, [sex, effectivePlanType, age, heightCm, weightKg, targetWeightKg, expectedTimelineWeeks, activityFactor, trainingDaysPerWeek, goalRatePctPerWeek, proteinFactor]);
 
-  const projection = useMemo(
-    () => buildTimelineProjection(weightKg, result.weeklyLossKg, targetWeightKg, expectedTimelineWeeks),
-    [weightKg, result.weeklyLossKg, targetWeightKg, expectedTimelineWeeks]
-  );
+  const projection = useMemo(() => buildTimelineProjection(weightKg, result.weeklyLossKg, targetWeightKg, expectedTimelineWeeks), [weightKg, result.weeklyLossKg, targetWeightKg, expectedTimelineWeeks]);
 
-  const exportPayload = useMemo(
-    () => ({
-      app: "Last Chance",
-      generatedAt: new Date().toISOString(),
-      input,
-      timelineRisk,
-      result,
-      projection
-    }),
-    [input, timelineRisk, result, projection]
-  );
+  const exportPayload = useMemo(() => ({ app: "Last Chance", generatedAt: new Date().toISOString(), input, timelineRisk, result, projection }), [input, timelineRisk, result, projection]);
 
-  useEffect(() => {
-    setSaved(false);
-  }, [result, timelineRisk]);
+  useEffect(() => setSaved(false), [result, timelineRisk]);
 
   function handleLanguageChange(nextLanguage: Language) {
     setLanguage(nextLanguage);
@@ -272,7 +228,6 @@ export default function App() {
 
   function handleSexChange(nextSex: Sex) {
     setSex(nextSex);
-
     if (nextSex === "female") {
       setPlanType("standard");
       setProteinFactor(DEFAULT_INPUTS.female.proteinFactor);
@@ -289,11 +244,7 @@ export default function App() {
 
   function handleDownloadJson() {
     if (timelineRisk.blocked) return;
-    downloadTextFile(
-      "last-chance-plan.json",
-      JSON.stringify(exportPayload, null, 2),
-      "application/json"
-    );
+    downloadTextFile("last-chance-plan.json", JSON.stringify(exportPayload, null, 2), "application/json");
   }
 
   function handleDownloadCsv() {
@@ -307,20 +258,8 @@ export default function App() {
         <div className="hero-topline">
           <p className="eyebrow">{t.eyebrow}</p>
           <div className="language-toggle" aria-label="Language selector">
-            <button
-              className={language === "en" ? "active" : ""}
-              onClick={() => handleLanguageChange("en")}
-              type="button"
-            >
-              EN
-            </button>
-            <button
-              className={language === "zh" ? "active" : ""}
-              onClick={() => handleLanguageChange("zh")}
-              type="button"
-            >
-              中文
-            </button>
+            <button className={language === "en" ? "active" : ""} onClick={() => handleLanguageChange("en")} type="button">EN</button>
+            <button className={language === "zh" ? "active" : ""} onClick={() => handleLanguageChange("zh")} type="button">中文</button>
           </div>
         </div>
         <h1 className="hero-title">Last Chance</h1>
@@ -330,20 +269,8 @@ export default function App() {
       <section className="card">
         <div className="card-title">{t.sex}</div>
         <div className="segmented two">
-          <button
-            className={sex === "male" ? "active" : ""}
-            onClick={() => handleSexChange("male")}
-            type="button"
-          >
-            {t.male}
-          </button>
-          <button
-            className={sex === "female" ? "active" : ""}
-            onClick={() => handleSexChange("female")}
-            type="button"
-          >
-            {t.female}
-          </button>
+          <button className={sex === "male" ? "active" : ""} onClick={() => handleSexChange("male")} type="button">{t.male}</button>
+          <button className={sex === "female" ? "active" : ""} onClick={() => handleSexChange("female")} type="button">{t.female}</button>
         </div>
       </section>
 
@@ -351,20 +278,8 @@ export default function App() {
         <section className="card">
           <div className="card-title">{t.plan}</div>
           <div className="segmented two">
-            <button
-              className={planType === "standard" ? "active" : ""}
-              onClick={() => setPlanType("standard")}
-              type="button"
-            >
-              {t.standard}
-            </button>
-            <button
-              className={planType === "carbCycling" ? "active" : ""}
-              onClick={() => setPlanType("carbCycling")}
-              type="button"
-            >
-              {t.carbCycling}
-            </button>
+            <button className={planType === "standard" ? "active" : ""} onClick={() => setPlanType("standard")} type="button">{t.standard}</button>
+            <button className={planType === "carbCycling" ? "active" : ""} onClick={() => setPlanType("carbCycling")} type="button">{t.carbCycling}</button>
           </div>
           <p className="small-note">{t.carbNote}</p>
         </section>
@@ -374,72 +289,23 @@ export default function App() {
         <div className="card-title">{t.bodyData}</div>
         <div className="input-grid">
           <NumberField label={t.age} value={age} min={18} max={80} onChange={setAge} />
-          <NumberField
-            label={t.height}
-            value={heightCm}
-            min={130}
-            max={230}
-            onChange={setHeightCm}
-          />
-          <NumberField
-            label={t.weight}
-            value={weightKg}
-            min={35}
-            max={250}
-            step={0.1}
-            onChange={setWeightKg}
-          />
-          <OptionalNumberField
-            label={t.target}
-            value={targetWeightKg}
-            min={35}
-            max={250}
-            step={0.1}
-            onChange={setTargetWeightKg}
-          />
-          <NumberField
-            label={t.expectedTimeline}
-            value={expectedTimelineWeeks}
-            min={MIN_TIMELINE_WEEKS}
-            max={MAX_TIMELINE_WEEKS}
-            onChange={setExpectedTimelineWeeks}
-          />
+          <NumberField label={t.height} value={heightCm} min={130} max={230} onChange={setHeightCm} />
+          <NumberField label={t.weight} value={weightKg} min={35} max={250} step={0.1} onChange={setWeightKg} />
+          <OptionalNumberField label={t.target} value={targetWeightKg} min={35} max={250} step={0.1} onChange={setTargetWeightKg} />
+          <NumberField label={t.expectedTimeline} value={expectedTimelineWeeks} min={MIN_TIMELINE_WEEKS} max={MAX_TIMELINE_WEEKS} onChange={setExpectedTimelineWeeks} />
           <div className="field">
             <label>{t.activity}</label>
-            <select
-              value={activityFactor}
-              onChange={(event) => setActivityFactor(Number(event.target.value))}
-            >
+            <select value={activityFactor} onChange={(event) => setActivityFactor(Number(event.target.value))}>
               {ACTIVITY_LEVELS.map((level) => (
-                <option key={level.value} value={level.value}>
-                  {level.label} · {level.description}
-                </option>
+                <option key={level.value} value={level.value}>{level.label} · {level.description}</option>
               ))}
             </select>
           </div>
-          <NumberField
-            label={t.trainingDays}
-            value={trainingDaysPerWeek}
-            min={0}
-            max={6}
-            onChange={setTrainingDaysPerWeek}
-          />
-          <NumberField
-            label={t.protein}
-            value={proteinFactor}
-            min={1.4}
-            max={2.4}
-            step={0.1}
-            onChange={setProteinFactor}
-          />
+          <NumberField label={t.trainingDays} value={trainingDaysPerWeek} min={0} max={6} onChange={setTrainingDaysPerWeek} />
+          <NumberField label={t.protein} value={proteinFactor} min={1.4} max={2.4} step={0.1} onChange={setProteinFactor} />
         </div>
         <TimelineRiskPanel risk={timelineRisk} />
-        <button
-          className="primary-button"
-          disabled={timelineRisk.blocked}
-          onClick={handleSave}
-          type="button"
-        >
+        <button className="primary-button" disabled={timelineRisk.blocked} onClick={handleSave} type="button">
           {timelineRisk.blocked ? t.adjustTimeline : saved ? t.savedLocal : t.saveLocal}
         </button>
       </section>
@@ -485,63 +351,22 @@ export default function App() {
       <section className="card">
         <div className="card-title">{t.export}</div>
         <div className="button-row">
-          <button
-            className="secondary-button"
-            disabled={timelineRisk.blocked}
-            type="button"
-            onClick={handleDownloadJson}
-          >
-            {t.exportJson}
-          </button>
-          <button
-            className="secondary-button"
-            disabled={timelineRisk.blocked}
-            type="button"
-            onClick={handleDownloadCsv}
-          >
-            {t.exportCsv}
-          </button>
+          <button className="secondary-button" disabled={timelineRisk.blocked} type="button" onClick={handleDownloadJson}>{t.exportJson}</button>
+          <button className="secondary-button" disabled={timelineRisk.blocked} type="button" onClick={handleDownloadCsv}>{t.exportCsv}</button>
         </div>
       </section>
 
-      {result.kind === "carbCycling" && (
-        <section className="card">
-          <div className="card-title">{t.weeklyStructure}</div>
-          <div className="day-counts">
-            <span>{result.dayCounts.high} high</span>
-            <span>{result.dayCounts.medium} medium</span>
-            <span>{result.dayCounts.low} low</span>
-          </div>
-          {result.weeklySchedule.map((row) => (
-            <div className="schedule-row" key={row.day}>
-              <strong>{row.day}</strong>
-              <span className={`day-type ${row.type.toLowerCase()}`}>{row.type}</span>
-              <span className="small-note">{row.note}</span>
-            </div>
-          ))}
-          <p className="small-note">{t.highNote}</p>
-        </section>
-      )}
+      {result.kind === "carbCycling" && <CarbCyclingWeeklyStructure result={result} labels={t} />}
 
       <section className="card">
         <div className="card-title">{t.execution}</div>
-        <p className="small-note">
-          {sex === "female"
-            ? t.femaleRules
-            : result.kind === "carbCycling"
-              ? t.carbRules
-              : t.standardRules}
-        </p>
+        <p className="small-note">{sex === "female" ? t.femaleRules : result.kind === "carbCycling" ? t.carbRules : t.standardRules}</p>
       </section>
 
       {result.warnings.length > 0 && (
         <section className="card">
           <div className="card-title">{t.safety}</div>
-          {result.warnings.map((warning) => (
-            <div className="warning" key={warning}>
-              {warning}
-            </div>
-          ))}
+          {result.warnings.map((warning) => <div className="warning" key={warning}>{warning}</div>)}
         </section>
       )}
 
@@ -554,75 +379,31 @@ export default function App() {
   );
 }
 
-function NumberField({
-  label,
-  value,
-  min,
-  max,
-  step = 1,
-  onChange
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step?: number;
-  onChange: (value: number) => void;
-}) {
+function NumberField({ label, value, min, max, step = 1, onChange }: { label: string; value: number; min: number; max: number; step?: number; onChange: (value: number) => void }) {
   return (
     <div className="field">
       <label>{label}</label>
-      <input
-        type="number"
-        value={value}
-        min={min}
-        max={max}
-        step={step}
-        onChange={(event) => {
-          const nextValue = Number(event.target.value);
-          if (Number.isFinite(nextValue)) onChange(nextValue);
-        }}
-      />
+      <input type="number" value={value} min={min} max={max} step={step} onChange={(event) => {
+        const nextValue = Number(event.target.value);
+        if (Number.isFinite(nextValue)) onChange(nextValue);
+      }} />
     </div>
   );
 }
 
-function OptionalNumberField({
-  label,
-  value,
-  min,
-  max,
-  step = 1,
-  onChange
-}: {
-  label: string;
-  value?: number;
-  min: number;
-  max: number;
-  step?: number;
-  onChange: (value: number | undefined) => void;
-}) {
+function OptionalNumberField({ label, value, min, max, step = 1, onChange }: { label: string; value?: number; min: number; max: number; step?: number; onChange: (value: number | undefined) => void }) {
   return (
     <div className="field">
       <label>{label}</label>
-      <input
-        type="number"
-        value={value ?? ""}
-        min={min}
-        max={max}
-        step={step}
-        placeholder="Optional"
-        onChange={(event) => {
-          const rawValue = event.target.value.trim();
-          if (rawValue === "") {
-            onChange(undefined);
-            return;
-          }
-
-          const nextValue = Number(rawValue);
-          if (Number.isFinite(nextValue)) onChange(nextValue);
-        }}
-      />
+      <input type="number" value={value ?? ""} min={min} max={max} step={step} placeholder="Optional" onChange={(event) => {
+        const rawValue = event.target.value.trim();
+        if (rawValue === "") {
+          onChange(undefined);
+          return;
+        }
+        const nextValue = Number(rawValue);
+        if (Number.isFinite(nextValue)) onChange(nextValue);
+      }} />
     </div>
   );
 }
@@ -636,33 +417,11 @@ function TimelineRiskPanel({ risk }: { risk: TimelineRisk }) {
   );
 }
 
-function Metric({
-  label,
-  value,
-  unit
-}: {
-  label: string;
-  value: number;
-  unit: string;
-}) {
-  return (
-    <div className="metric">
-      <div className="metric-label">{label}</div>
-      <div className="metric-value">
-        {value}
-        <span className="metric-unit">{unit}</span>
-      </div>
-    </div>
-  );
+function Metric({ label, value, unit }: { label: string; value: number; unit: string }) {
+  return <div className="metric"><div className="metric-label">{label}</div><div className="metric-value">{value}<span className="metric-unit">{unit}</span></div></div>;
 }
 
-function MacroGrid({
-  data,
-  labels
-}: {
-  data: MacroResult;
-  labels: typeof copy.en | typeof copy.zh;
-}) {
+function MacroGrid({ data, labels }: { data: MacroResult; labels: typeof copy.en | typeof copy.zh }) {
   return (
     <div className="metric-grid">
       <Metric label={labels.calories} value={data.calories} unit="kcal" />
@@ -673,91 +432,29 @@ function MacroGrid({
   );
 }
 
-function MacroBlock({
-  title,
-  data,
-  labels
-}: {
-  title: string;
-  data: MacroResult;
-  labels: typeof copy.en | typeof copy.zh;
-}) {
-  return (
-    <div className="macro-block">
-      <h3>{title}</h3>
-      <MacroGrid data={data} labels={labels} />
-    </div>
-  );
+function MacroBlock({ title, data, labels }: { title: string; data: MacroResult; labels: typeof copy.en | typeof copy.zh }) {
+  return <div className="macro-block"><h3>{title}</h3><MacroGrid data={data} labels={labels} /></div>;
 }
 
-function WeeklyCalorieCheck({
-  result,
-  labels
-}: {
-  result: Extract<PlanResult, { kind: "carbCycling" }>;
-  labels: typeof copy.en | typeof copy.zh;
-}) {
-  const allocated =
-    result.highDay.calories * result.dayCounts.high +
-    result.mediumDay.calories * result.dayCounts.medium +
-    result.lowDay.calories * result.dayCounts.low;
+function WeeklyCalorieCheck({ result, labels }: { result: Extract<PlanResult, { kind: "carbCycling" }>; labels: typeof copy.en | typeof copy.zh }) {
+  const allocated = result.highDay.calories * result.dayCounts.high + result.mediumDay.calories * result.dayCounts.medium + result.lowDay.calories * result.dayCounts.low;
   const difference = allocated - result.weeklyCalories;
 
   return (
     <div className="check-grid">
-      <div>
-        <span>{labels.targetWeeklyCalories}</span>
-        <strong>{result.weeklyCalories} kcal</strong>
-      </div>
-      <div>
-        <span>{labels.allocatedWeeklyCalories}</span>
-        <strong>{allocated} kcal</strong>
-      </div>
-      <div>
-        <span>{labels.difference}</span>
-        <strong>{difference > 0 ? "+" : ""}{difference} kcal</strong>
-      </div>
+      <div><span>{labels.targetWeeklyCalories}</span><strong>{result.weeklyCalories} kcal</strong></div>
+      <div><span>{labels.allocatedWeeklyCalories}</span><strong>{allocated} kcal</strong></div>
+      <div><span>{labels.difference}</span><strong>{difference > 0 ? "+" : ""}{difference} kcal</strong></div>
     </div>
   );
 }
 
-function buildTimelineRisk(
-  currentWeightKg: number,
-  targetWeightKg: number | undefined,
-  expectedTimelineWeeks: number,
-  labels: typeof copy.en | typeof copy.zh
-): TimelineRisk {
-  if (!Number.isFinite(currentWeightKg) || !Number.isFinite(expectedTimelineWeeks)) {
-    return {
-      status: "empty",
-      title: labels.riskSetTarget,
-      detail: labels.riskSetTargetDetail,
-      blocked: false
-    };
-  }
+function buildTimelineRisk(currentWeightKg: number, targetWeightKg: number | undefined, expectedTimelineWeeks: number, labels: typeof copy.en | typeof copy.zh): TimelineRisk {
+  if (!Number.isFinite(currentWeightKg) || !Number.isFinite(expectedTimelineWeeks)) return { status: "empty", title: labels.riskSetTarget, detail: labels.riskSetTargetDetail, blocked: false };
+  if (targetWeightKg === undefined || !Number.isFinite(targetWeightKg)) return { status: "empty", title: labels.riskSetTarget, detail: labels.riskSetTargetDetail, blocked: false };
+  if (targetWeightKg >= currentWeightKg) return { status: "maintain", title: labels.riskNoLossTarget, detail: labels.riskNoLossTargetDetail, blocked: false };
 
-  if (targetWeightKg === undefined || !Number.isFinite(targetWeightKg)) {
-    return {
-      status: "empty",
-      title: labels.riskSetTarget,
-      detail: labels.riskSetTargetDetail,
-      blocked: false
-    };
-  }
-
-  if (targetWeightKg >= currentWeightKg) {
-    return {
-      status: "maintain",
-      title: labels.riskNoLossTarget,
-      detail: labels.riskNoLossTargetDetail,
-      blocked: false
-    };
-  }
-
-  const weeks = Math.min(
-    MAX_TIMELINE_WEEKS,
-    Math.max(MIN_TIMELINE_WEEKS, Math.round(expectedTimelineWeeks))
-  );
+  const weeks = Math.min(MAX_TIMELINE_WEEKS, Math.max(MIN_TIMELINE_WEEKS, Math.round(expectedTimelineWeeks)));
   const totalLossKg = currentWeightKg - targetWeightKg;
   const weeklyLossKg = totalLossKg / weeks;
   const weeklyRate = weeklyLossKg / currentWeightKg;
@@ -770,55 +467,24 @@ function buildTimelineRisk(
     .replace("{hardWeeks}", String(hardWeeks));
   const planRate = Math.min(HARD_TIMELINE_LIMIT_RATE, Math.max(0.002, weeklyRate));
 
-  if (weeklyRate > HARD_TIMELINE_LIMIT_RATE) {
-    return {
-      status: "blocked",
-      title: labels.riskBlocked,
-      detail,
-      blocked: true,
-      planRate
-    };
-  }
-
-  if (weeklyRate > 0.015) {
-    return { status: "high", title: labels.riskHigh, detail, blocked: false, planRate };
-  }
-
-  if (weeklyRate > 0.01) {
-    return { status: "aggressive", title: labels.riskAggressive, detail, blocked: false, planRate };
-  }
-
-  if (weeklyRate >= 0.005) {
-    return { status: "standard", title: labels.riskStandard, detail, blocked: false, planRate };
-  }
-
+  if (weeklyRate > HARD_TIMELINE_LIMIT_RATE) return { status: "blocked", title: labels.riskBlocked, detail, blocked: true, planRate };
+  if (weeklyRate > 0.015) return { status: "high", title: labels.riskHigh, detail, blocked: false, planRate };
+  if (weeklyRate > 0.01) return { status: "aggressive", title: labels.riskAggressive, detail, blocked: false, planRate };
+  if (weeklyRate >= 0.005) return { status: "standard", title: labels.riskStandard, detail, blocked: false, planRate };
   return { status: "safe", title: labels.riskSafe, detail, blocked: false, planRate };
 }
 
-function buildTimelineProjection(
-  currentWeightKg: number,
-  weeklyLossKg: number,
-  targetWeightKg: number | undefined,
-  expectedTimelineWeeks: number
-) {
-  const hasWeightTarget =
-    Number.isFinite(targetWeightKg) && targetWeightKg !== undefined && targetWeightKg < currentWeightKg;
-  const totalWeeks = hasWeightTarget
-    ? Math.min(MAX_TIMELINE_WEEKS, Math.max(MIN_TIMELINE_WEEKS, Math.round(expectedTimelineWeeks)))
-    : DEFAULT_TIMELINE_WEEKS;
+function buildTimelineProjection(currentWeightKg: number, weeklyLossKg: number, targetWeightKg: number | undefined, expectedTimelineWeeks: number) {
+  const hasWeightTarget = Number.isFinite(targetWeightKg) && targetWeightKg !== undefined && targetWeightKg < currentWeightKg;
+  const totalWeeks = hasWeightTarget ? Math.min(MAX_TIMELINE_WEEKS, Math.max(MIN_TIMELINE_WEEKS, Math.round(expectedTimelineWeeks))) : DEFAULT_TIMELINE_WEEKS;
   const target = hasWeightTarget ? targetWeightKg : undefined;
-  const projectionWeeklyLossKg =
-    target !== undefined ? (currentWeightKg - target) / totalWeeks : weeklyLossKg;
+  const projectionWeeklyLossKg = target !== undefined ? (currentWeightKg - target) / totalWeeks : weeklyLossKg;
 
   return Array.from({ length: totalWeeks }, (_, index) => {
     const week = index + 1;
     const rawWeight = currentWeightKg - projectionWeeklyLossKg * week;
     const weightKg = target !== undefined ? Math.max(rawWeight, target) : rawWeight;
-
-    return {
-      week,
-      weightKg
-    };
+    return { week, weightKg };
   });
 }
 
@@ -834,12 +500,7 @@ function downloadTextFile(filename: string, content: string, mimeType: string) {
   URL.revokeObjectURL(url);
 }
 
-function buildCsv(
-  input: UserInput,
-  timelineRisk: TimelineRisk,
-  result: PlanResult,
-  projection: { week: number; weightKg: number }[]
-): string {
+function buildCsv(input: UserInput, timelineRisk: TimelineRisk, result: PlanResult, projection: { week: number; weightKg: number }[]): string {
   const lines: string[] = [];
   lines.push("section,key,value");
   lines.push(`input,sex,${input.sex}`);
@@ -872,10 +533,7 @@ function buildCsv(
     lines.push(`carbCycle,weeklyCalories,${result.weeklyCalories}`);
   }
 
-  projection.forEach((row) => {
-    lines.push(`projection,week_${row.week},${row.weightKg.toFixed(1)}`);
-  });
-
+  projection.forEach((row) => lines.push(`projection,week_${row.week},${row.weightKg.toFixed(1)}`));
   return lines.join("\n");
 }
 
