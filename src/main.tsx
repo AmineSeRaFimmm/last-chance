@@ -4,6 +4,7 @@ import Root from "./Root";
 import "./styles/global.css";
 import "./styles/progress.css";
 import "./styles/navigation.css";
+import "./styles/projection.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
