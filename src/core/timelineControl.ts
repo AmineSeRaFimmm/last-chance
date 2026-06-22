@@ -17,10 +17,12 @@ export function installTimelineControl(): void {
   if (installed || typeof document === "undefined") return;
   installed = true;
 
-  const enhance = () => setupTimelineControl();
-  enhance();
+  setupTimelineControl();
 
-  const observer = new MutationObserver(enhance);
+  const observer = new MutationObserver((mutations) => {
+    if (mutations.every(isTimelineOwnedMutation)) return;
+    setupTimelineControl();
+  });
   observer.observe(document.body, { childList: true, subtree: true });
 }
 
@@ -218,6 +220,12 @@ function setReactInputValue(input: HTMLInputElement | null, value: string): void
   )?.set;
   nativeInputValueSetter?.call(input, value);
   input.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+function isTimelineOwnedMutation(mutation: MutationRecord): boolean {
+  const target = mutation.target;
+  if (!(target instanceof Element)) return false;
+  return Boolean(target.closest(".timeline-field, .timeline-risk-panel"));
 }
 
 function findFieldByLabel(labels: string[]): HTMLElement | null {
