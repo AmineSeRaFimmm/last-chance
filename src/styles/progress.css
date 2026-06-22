@@ -1,0 +1,146 @@
+.progress-shell {
+  padding-top: 0;
+}
+
+.tracker-source-card {
+  margin-top: 0;
+}
+
+.full-width-button {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.no-margin {
+  margin-top: 0;
+}
+
+.compact-grid {
+  margin-top: 12px;
+}
+
+.progress-buttons {
+  margin-top: 12px;
+}
+
+.danger-button {
+  color: #8a1f11;
+  background: rgba(255, 59, 48, 0.1);
+}
+
+.progress-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.progress-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #f5f5f7;
+  border-radius: 20px;
+  padding: 13px;
+}
+
+.progress-metric span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.progress-metric strong {
+  font-size: 20px;
+  letter-spacing: -0.04em;
+}
+
+.progress-verdict {
+  margin-top: 12px;
+  border-radius: 20px;
+  padding: 13px 14px;
+  font-size: 14px;
+  line-height: 1.45;
+  background: #f2f2f7;
+  color: #3a3a3c;
+}
+
+.progress-verdict.onTrack {
+  background: rgba(52, 199, 89, 0.14);
+  color: #147a32;
+}
+
+.progress-verdict.slow,
+.progress-verdict.gain {
+  background: rgba(255, 149, 0, 0.15);
+  color: #8a4a00;
+}
+
+.progress-verdict.fast {
+  background: rgba(0, 122, 255, 0.12);
+  color: #0057b8;
+}
+
+.recent-log {
+  margin-top: 14px;
+}
+
+.recent-log-title {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+
+.log-row {
+  display: grid;
+  grid-template-columns: 1.2fr 0.9fr 0.9fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.log-row:last-child {
+  border-bottom: 0;
+}
+
+.log-row span,
+.log-row em {
+  color: var(--muted);
+  font-style: normal;
+  font-size: 13px;
+}
+
+.log-row strong {
+  font-size: 14px;
+}
+
+.log-row button {
+  border: 0;
+  background: #f2f2f7;
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 6px 9px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+@media (max-width: 420px) {
+  .progress-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .log-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .log-row button {
+    grid-column: span 2;
+  }
+}
