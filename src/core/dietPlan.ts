@@ -32,6 +32,14 @@ export interface DietDay {
   totals: MacroResult;
 }
 
+interface DayBalanceEntry {
+  mealName: string;
+  food: FoodWithCategory;
+  grams: number;
+  min: number;
+  max: number;
+}
+
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 const proteins: FoodItem[] = [
@@ -137,7 +145,7 @@ function buildDietDay(day: string, type: DietDay["type"], target: MacroResult, i
   const lunch = buildMeal("Lunch", target, index + 2, 0.35, 0.34, 0.32);
   const dinner = buildMeal("Dinner", target, index + 4, 0.30, 0.29, 0.34);
   const snack = buildSnack(target, index, 0.10, 0.10, 0.12);
-  const meals = [breakfast, lunch, dinner, snack];
+  const meals = balanceMealsToTarget([breakfast, lunch, dinner, snack], target);
   const totals = sumMeals(meals);
 
   return { day, type, target, meals, totals };
@@ -186,6 +194,99 @@ function buildSnack(
     { food: fruitFood, grams: gramsFor(fruitFood.carbs, carbTarget, 80, 220) },
     { food: fatFood, grams: gramsFor(fatFood.fat, fatTarget, 5, 25) }
   ]);
+}
+
+function balanceMealsToTarget(meals: DietMeal[], target: MacroResult): DietMeal[] {
+  let entries = meals.flatMap((meal) =>
+    meal.items.map((item) => {
+      const food = getFoodByName(item.name);
+      if (!food) return null;
+      return { mealName: meal.name, food, grams: item.grams, ...boundsForFood(food) };
+    })
+  ).filter((entry): entry is DayBalanceEntry => Boolean(entry));
+
+  let bestScore = scoreDayEntries(entries, target);
+
+  for (const step of [80, 40, 20, 10, 5]) {
+    for (let round = 0; round < 14; round += 1) {
+      let improved = false;
+
+      entries = entries.map((entry, index) => {
+        let bestEntry = entry;
+
+        for (const direction of [-1, 1]) {
+          const candidate = {
+            ...entry,
+            grams: clamp(roundToFive(entry.grams + direction * step), entry.min, entry.max)
+          };
+          const nextEntries = entries.map((item, itemIndex) => (itemIndex === index ? candidate : item));
+          const nextScore = scoreDayEntries(nextEntries, target);
+
+          if (nextScore < bestScore) {
+            bestScore = nextScore;
+            bestEntry = candidate;
+            improved = true;
+          }
+        }
+
+        return bestEntry;
+      });
+
+      if (!improved) break;
+    }
+  }
+
+  return meals.map((meal) => makeMeal(
+    meal.name,
+    entries
+      .filter((entry) => entry.mealName === meal.name)
+      .map((entry) => ({ food: entry.food, grams: entry.grams }))
+  ));
+}
+
+function scoreDayEntries(entries: DayBalanceEntry[], target: MacroResult): number {
+  const macro = calculateEntries(entries);
+  const calorieError = normalize(macro.calories - target.calories, Math.max(600, target.calories));
+  const proteinError = normalize(macro.proteinG - target.proteinG, Math.max(25, target.proteinG));
+  const carbsError = normalize(macro.carbsG - target.carbsG, Math.max(35, target.carbsG));
+  const fatError = normalize(macro.fatG - target.fatG, Math.max(15, target.fatG));
+  const gramPenalty = entries.reduce((sum, entry) => sum + Math.pow((entry.grams - defaultGramsForCategory(entry.food.category)) / 260, 2), 0);
+
+  return 10 * calorieError ** 2 + 4 * proteinError ** 2 + 3 * carbsError ** 2 + 3 * fatError ** 2 + 0.1 * gramPenalty;
+}
+
+function calculateEntries(entries: DayBalanceEntry[]): MacroResult {
+  return entries.reduce(
+    (sum, entry) => {
+      const factor = roundToFive(entry.grams) / 100;
+      return {
+        calories: sum.calories + entry.food.kcal * factor,
+        proteinG: sum.proteinG + entry.food.protein * factor,
+        carbsG: sum.carbsG + entry.food.carbs * factor,
+        fatG: sum.fatG + entry.food.fat * factor
+      };
+    },
+    { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 }
+  );
+}
+
+function boundsForFood(food: FoodWithCategory): { min: number; max: number } {
+  if (food.category === "proteins") return { min: 70, max: 300 };
+  if (food.category === "carbs") return { min: 50, max: 360 };
+  if (food.category === "vegetables") return { min: 80, max: 260 };
+  if (food.category === "fruits") return { min: 60, max: 260 };
+  if (food.category === "dairy") return { min: 100, max: 320 };
+  if (food.name === "Olive oil") return { min: 3, max: 20 };
+  return { min: 5, max: 40 };
+}
+
+function defaultGramsForCategory(category: FoodCategory): number {
+  if (category === "proteins") return 160;
+  if (category === "carbs") return 180;
+  if (category === "vegetables") return 170;
+  if (category === "fruits") return 150;
+  if (category === "fats") return 18;
+  return 200;
 }
 
 function makeMeal(name: string, entries: Array<{ food: FoodItem; grams: number }>): DietMeal {
@@ -240,4 +341,12 @@ function roundMacro(value: MacroResult): MacroResult {
     carbsG: Math.round(value.carbsG),
     fatG: Math.round(value.fatG)
   };
+}
+
+function normalize(value: number, denominator: number): number {
+  return value / denominator;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
 }
