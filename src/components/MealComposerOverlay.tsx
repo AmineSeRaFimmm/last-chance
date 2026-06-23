@@ -23,6 +23,12 @@ interface ActiveDrag {
   moved: boolean;
 }
 
+interface CardPosition {
+  left: string;
+  top: string;
+  rotate: string;
+}
+
 interface MealComposerOverlayProps {
   language: Language;
   dayLabel: string;
@@ -55,7 +61,7 @@ const copy = {
   }
 } as const;
 
-const orbit = [
+const orbit: CardPosition[] = [
   { left: "2%", top: "4%", rotate: "-5deg" },
   { left: "69%", top: "4%", rotate: "3deg" },
   { left: "8%", top: "15%", rotate: "4deg" },
@@ -83,17 +89,19 @@ export function MealComposerOverlay({
   onClose
 }: MealComposerOverlayProps) {
   const t = copy[language];
+  const ingredientOrbitRef = useRef<HTMLDivElement | null>(null);
   const selectedZoneRef = useRef<HTMLDivElement | null>(null);
   const activeDragRef = useRef<ActiveDrag | null>(null);
   const [activeDrag, setActiveDrag] = useState<ActiveDrag | null>(null);
+  const [externalPositions, setExternalPositions] = useState<Record<string, CardPosition>>({});
   const [selectedFoodNames, setSelectedFoodNames] = useState(() => meal.items.map((item) => item.name));
   const preview = useMemo(
     () => optimizeMealFromFoodNames(meal.name, baseMeal, selectedFoodNames),
     [baseMeal, meal.name, selectedFoodNames]
   );
   const options = useMemo(
-    () => prioritizeFoods(getMealFoodOptions().filter((food) => !selectedFoodNames.includes(food.name)), meal),
-    [meal, selectedFoodNames]
+    () => prioritizeFoods(getMealFoodOptions().filter((food) => !selectedFoodNames.includes(food.name)), meal, externalPositions),
+    [meal, selectedFoodNames, externalPositions]
   );
   const selectedFoods = selectedFoodNames
     .map((name) => getMealFoodOptions().find((food) => food.name === name))
@@ -142,9 +150,17 @@ export function MealComposerOverlay({
       if (!current.moved) {
         if (current.source === "available") addFood(current.foodName);
         if (current.source === "selected") removeFood(current.foodName);
-      } else {
-        if (current.source === "available" && insideSelectedZone) addFood(current.foodName);
-        if (current.source === "selected" && !insideSelectedZone) removeFood(current.foodName);
+      } else if (current.source === "available") {
+        if (insideSelectedZone) {
+          addFood(current.foodName);
+        } else {
+          placeExternalCard(current.foodName, event.clientX, event.clientY);
+        }
+      } else if (current.source === "selected") {
+        if (!insideSelectedZone) {
+          placeExternalCard(current.foodName, event.clientX, event.clientY);
+          removeFood(current.foodName);
+        }
       }
 
       setActiveDrag(null);
@@ -173,6 +189,13 @@ export function MealComposerOverlay({
     setSelectedFoodNames((current) => current.filter((name) => name !== foodName));
   }
 
+  function placeExternalCard(foodName: string, clientX: number, clientY: number) {
+    setExternalPositions((current) => ({
+      ...current,
+      [foodName]: getExternalCardPosition(clientX, clientY, ingredientOrbitRef.current)
+    }));
+  }
+
   function startDrag(event: ReactPointerEvent<HTMLElement>, source: DragSource, food: FoodWithCategory) {
     event.preventDefault();
     event.stopPropagation();
@@ -193,19 +216,22 @@ export function MealComposerOverlay({
     <div className="meal-composer-overlay" role="dialog" aria-modal="true" aria-label={`${dayLabel} ${meal.name} composer`}>
       <button className="meal-composer-backdrop" type="button" aria-label={t.cancel} onClick={onClose} />
 
-      <div className="ingredient-orbit" aria-label={t.outside}>
-        {options.slice(0, orbit.length).map((food, index) => (
-          <button
-            className={`ingredient-chip ${getMealFoodRole(food)}`}
-            key={food.name}
-            onPointerDown={(event) => startDrag(event, "available", food)}
-            style={{ left: orbit[index].left, top: orbit[index].top, transform: `rotate(${orbit[index].rotate})` }}
-            type="button"
-          >
-            <span>{categoryLabel(food.category, t)}</span>
-            <strong>{food.name}</strong>
-          </button>
-        ))}
+      <div className="ingredient-orbit" aria-label={t.outside} ref={ingredientOrbitRef}>
+        {options.slice(0, orbit.length).map((food, index) => {
+          const position = externalPositions[food.name] ?? orbit[index];
+          return (
+            <button
+              className={`ingredient-chip ${getMealFoodRole(food)}`}
+              key={food.name}
+              onPointerDown={(event) => startDrag(event, "available", food)}
+              style={{ left: position.left, top: position.top, transform: `rotate(${position.rotate})` }}
+              type="button"
+            >
+              <span>{categoryLabel(food.category, t)}</span>
+              <strong>{food.name}</strong>
+            </button>
+          );
+        })}
       </div>
 
       <section className="meal-composer-card">
@@ -244,12 +270,14 @@ export function MealComposerOverlay({
   );
 }
 
-function prioritizeFoods(foods: FoodWithCategory[], meal: DietMeal): FoodWithCategory[] {
+function prioritizeFoods(foods: FoodWithCategory[], meal: DietMeal, positions: Record<string, CardPosition>): FoodWithCategory[] {
   const currentRoles = new Set(meal.items.map((item) => getMealFoodOptions().find((food) => food.name === item.name)).filter(Boolean).map((food) => getMealFoodRole(food as FoodWithCategory)));
   return [...foods].sort((first, second) => {
+    const firstMoved = positions[first.name] ? 0 : 1;
+    const secondMoved = positions[second.name] ? 0 : 1;
     const firstPreferred = currentRoles.has(getMealFoodRole(first)) ? 0 : 1;
     const secondPreferred = currentRoles.has(getMealFoodRole(second)) ? 0 : 1;
-    return firstPreferred - secondPreferred || first.name.localeCompare(second.name);
+    return firstMoved - secondMoved || firstPreferred - secondPreferred || first.name.localeCompare(second.name);
   });
 }
 
@@ -260,8 +288,23 @@ function categoryLabel(category: FoodCategory, labels: typeof copy.en | typeof c
   return labels.plants;
 }
 
+function getExternalCardPosition(clientX: number, clientY: number, container: HTMLElement | null): CardPosition {
+  const rect = container?.getBoundingClientRect() ?? { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+  const compact = window.matchMedia("(max-width: 420px)").matches;
+  const chipWidth = compact ? 96 : 128;
+  const chipHeight = compact ? 50 : 56;
+  const left = clamp(clientX - rect.left - chipWidth / 2, 0, Math.max(0, rect.width - chipWidth));
+  const top = clamp(clientY - rect.top - chipHeight / 2, 0, Math.max(0, rect.height - chipHeight));
+
+  return { left: `${Math.round(left)}px`, top: `${Math.round(top)}px`, rotate: "0deg" };
+}
+
 function isInsideElement(x: number, y: number, element: HTMLElement | null): boolean {
   if (!element) return false;
   const rect = element.getBoundingClientRect();
   return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
 }
