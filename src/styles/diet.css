@@ -254,10 +254,11 @@
 
 .meal-selected-zone {
   min-height: 132px;
-  border: 1px dashed rgba(110, 110, 115, 0.32);
+  border: 1px dashed rgba(110, 110, 115, 0.28);
   border-radius: 22px;
   padding: 13px;
-  background: rgba(245, 245, 247, 0.74);
+  background: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(12px) saturate(1.08);
 }
 
 .meal-selected-list {
@@ -292,18 +293,18 @@
 .meal-composer-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 7px;
   width: 100%;
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 .meal-composer-actions .secondary-button,
 .meal-composer-actions .primary-button {
   width: 100%;
   margin-top: 0;
-  padding: 12px 10px;
-  border-radius: 17px;
-  font-size: 13px;
+  padding: 10px 8px;
+  border-radius: 15px;
+  font-size: 12px;
 }
 
 .no-top-margin {
@@ -371,14 +372,14 @@
   }
 
   .meal-composer-actions {
-    gap: 6px;
-    margin-top: 8px;
+    gap: 5px;
+    margin-top: 7px;
   }
 
   .meal-composer-actions .secondary-button,
   .meal-composer-actions .primary-button {
-    padding: 11px 7px;
-    border-radius: 15px;
-    font-size: 12px;
+    padding: 9px 6px;
+    border-radius: 14px;
+    font-size: 11px;
   }
 }
