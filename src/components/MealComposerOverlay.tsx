@@ -92,6 +92,7 @@ export function MealComposerOverlay({
   const ingredientOrbitRef = useRef<HTMLDivElement | null>(null);
   const selectedZoneRef = useRef<HTMLDivElement | null>(null);
   const activeDragRef = useRef<ActiveDrag | null>(null);
+  const orbitSlotRef = useRef<Record<string, number>>({});
   const [activeDrag, setActiveDrag] = useState<ActiveDrag | null>(null);
   const [externalPositions, setExternalPositions] = useState<Record<string, CardPosition>>({});
   const [selectedFoodNames, setSelectedFoodNames] = useState(() => meal.items.map((item) => item.name));
@@ -100,8 +101,8 @@ export function MealComposerOverlay({
     [baseMeal, meal.name, selectedFoodNames]
   );
   const options = useMemo(
-    () => prioritizeFoods(getMealFoodOptions().filter((food) => !selectedFoodNames.includes(food.name)), meal, externalPositions),
-    [meal, selectedFoodNames, externalPositions]
+    () => prioritizeFoods(getMealFoodOptions().filter((food) => !selectedFoodNames.includes(food.name)), meal),
+    [meal, selectedFoodNames]
   );
   const selectedFoods = selectedFoodNames
     .map((name) => getMealFoodOptions().find((food) => food.name === name))
@@ -196,6 +197,28 @@ export function MealComposerOverlay({
     }));
   }
 
+  function getCardPosition(foodName: string, fallbackIndex: number): CardPosition {
+    const movedPosition = externalPositions[foodName];
+    if (movedPosition) return movedPosition;
+
+    const assignedSlot = orbitSlotRef.current[foodName];
+    if (assignedSlot !== undefined) return orbit[assignedSlot];
+
+    const usedSlots = new Set(Object.values(orbitSlotRef.current));
+    let slot = fallbackIndex % orbit.length;
+
+    for (let offset = 0; offset < orbit.length; offset += 1) {
+      const candidate = (fallbackIndex + offset) % orbit.length;
+      if (!usedSlots.has(candidate)) {
+        slot = candidate;
+        break;
+      }
+    }
+
+    orbitSlotRef.current[foodName] = slot;
+    return orbit[slot];
+  }
+
   function startDrag(event: ReactPointerEvent<HTMLElement>, source: DragSource, food: FoodWithCategory) {
     event.preventDefault();
     event.stopPropagation();
@@ -218,7 +241,7 @@ export function MealComposerOverlay({
 
       <div className="ingredient-orbit" aria-label={t.outside} ref={ingredientOrbitRef}>
         {options.slice(0, orbit.length).map((food, index) => {
-          const position = externalPositions[food.name] ?? orbit[index];
+          const position = getCardPosition(food.name, index);
           return (
             <button
               className={`ingredient-chip ${getMealFoodRole(food)}`}
@@ -270,14 +293,12 @@ export function MealComposerOverlay({
   );
 }
 
-function prioritizeFoods(foods: FoodWithCategory[], meal: DietMeal, positions: Record<string, CardPosition>): FoodWithCategory[] {
+function prioritizeFoods(foods: FoodWithCategory[], meal: DietMeal): FoodWithCategory[] {
   const currentRoles = new Set(meal.items.map((item) => getMealFoodOptions().find((food) => food.name === item.name)).filter(Boolean).map((food) => getMealFoodRole(food as FoodWithCategory)));
   return [...foods].sort((first, second) => {
-    const firstMoved = positions[first.name] ? 0 : 1;
-    const secondMoved = positions[second.name] ? 0 : 1;
     const firstPreferred = currentRoles.has(getMealFoodRole(first)) ? 0 : 1;
     const secondPreferred = currentRoles.has(getMealFoodRole(second)) ? 0 : 1;
-    return firstMoved - secondMoved || firstPreferred - secondPreferred || first.name.localeCompare(second.name);
+    return firstPreferred - secondPreferred || first.name.localeCompare(second.name);
   });
 }
 
