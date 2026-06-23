@@ -196,24 +196,28 @@
   letter-spacing: -0.02em;
 }
 
+.diet-food-list span.protein,
 .ingredient-chip.protein,
 .selected-food-pill.protein,
 .meal-floating-chip.protein {
   background: rgba(255, 255, 255, 0.78);
 }
 
+.diet-food-list span.carb,
 .ingredient-chip.carb,
 .selected-food-pill.carb,
 .meal-floating-chip.carb {
   background: rgba(255, 250, 238, 0.78);
 }
 
+.diet-food-list span.fat,
 .ingredient-chip.fat,
 .selected-food-pill.fat,
 .meal-floating-chip.fat {
   background: rgba(252, 247, 255, 0.78);
 }
 
+.diet-food-list span.plant,
 .ingredient-chip.plant,
 .selected-food-pill.plant,
 .meal-floating-chip.plant {
