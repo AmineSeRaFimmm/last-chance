@@ -1,4 +1,4 @@
-import { useMemo, useState, type DragEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import type { DietMeal, FoodCategory, FoodWithCategory } from "../core/dietPlan";
 import {
   getMealFoodOptions,
@@ -9,10 +9,18 @@ import {
 
 type Language = "en" | "zh";
 type DragSource = "available" | "selected";
+type FoodRole = ReturnType<typeof getMealFoodRole>;
 
-interface DragPayload {
+interface ActiveDrag {
   source: DragSource;
   foodName: string;
+  label: string;
+  role: FoodRole;
+  startX: number;
+  startY: number;
+  x: number;
+  y: number;
+  moved: boolean;
 }
 
 interface MealComposerOverlayProps {
@@ -48,20 +56,18 @@ const copy = {
 } as const;
 
 const orbit = [
-  { left: "4%", top: "7%", rotate: "-5deg" },
-  { left: "37%", top: "4%", rotate: "3deg" },
-  { left: "70%", top: "8%", rotate: "-2deg" },
-  { left: "6%", top: "23%", rotate: "4deg" },
-  { left: "76%", top: "25%", rotate: "-6deg" },
-  { left: "2%", top: "44%", rotate: "-3deg" },
-  { left: "80%", top: "44%", rotate: "5deg" },
-  { left: "8%", top: "68%", rotate: "2deg" },
-  { left: "68%", top: "70%", rotate: "-4deg" },
-  { left: "39%", top: "84%", rotate: "3deg" },
-  { left: "55%", top: "20%", rotate: "5deg" },
-  { left: "20%", top: "55%", rotate: "-6deg" },
-  { left: "72%", top: "59%", rotate: "2deg" },
-  { left: "20%", top: "15%", rotate: "-2deg" }
+  { left: "2%", top: "5%", rotate: "-5deg" },
+  { left: "68%", top: "5%", rotate: "3deg" },
+  { left: "7%", top: "18%", rotate: "4deg" },
+  { left: "76%", top: "20%", rotate: "-6deg" },
+  { left: "3%", top: "37%", rotate: "-3deg" },
+  { left: "80%", top: "39%", rotate: "5deg" },
+  { left: "4%", top: "60%", rotate: "2deg" },
+  { left: "74%", top: "62%", rotate: "-4deg" },
+  { left: "10%", top: "80%", rotate: "3deg" },
+  { left: "62%", top: "81%", rotate: "-2deg" },
+  { left: "31%", top: "7%", rotate: "5deg" },
+  { left: "35%", top: "86%", rotate: "-6deg" }
 ];
 
 export function MealComposerOverlay({
@@ -73,6 +79,9 @@ export function MealComposerOverlay({
   onClose
 }: MealComposerOverlayProps) {
   const t = copy[language];
+  const selectedZoneRef = useRef<HTMLDivElement | null>(null);
+  const activeDragRef = useRef<ActiveDrag | null>(null);
+  const [activeDrag, setActiveDrag] = useState<ActiveDrag | null>(null);
   const [selectedFoodNames, setSelectedFoodNames] = useState(() => meal.items.map((item) => item.name));
   const preview = useMemo(
     () => optimizeMealFromFoodNames(meal.name, baseMeal, selectedFoodNames),
@@ -87,6 +96,71 @@ export function MealComposerOverlay({
     .filter((food): food is FoodWithCategory => Boolean(food));
   const applyDisabled = preview.status === "empty" || preview.status === "needs-protein";
 
+  useEffect(() => {
+    activeDragRef.current = activeDrag;
+  }, [activeDrag]);
+
+  useEffect(() => {
+    const bodyOverflow = document.body.style.overflow;
+    const bodyTouchAction = document.body.style.touchAction;
+    const rootOverscroll = document.documentElement.style.overscrollBehavior;
+
+    document.body.style.overflow = "hidden";
+    document.body.style.touchAction = "none";
+    document.documentElement.style.overscrollBehavior = "none";
+
+    return () => {
+      document.body.style.overflow = bodyOverflow;
+      document.body.style.touchAction = bodyTouchAction;
+      document.documentElement.style.overscrollBehavior = rootOverscroll;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!activeDrag) return;
+
+    function handlePointerMove(event: PointerEvent) {
+      event.preventDefault();
+      setActiveDrag((current) => {
+        if (!current) return null;
+        const moved = current.moved || Math.hypot(event.clientX - current.startX, event.clientY - current.startY) > 5;
+        return { ...current, x: event.clientX, y: event.clientY, moved };
+      });
+    }
+
+    function handlePointerUp(event: PointerEvent) {
+      event.preventDefault();
+      const current = activeDragRef.current;
+      if (!current) return;
+
+      const insideSelectedZone = isInsideElement(event.clientX, event.clientY, selectedZoneRef.current);
+
+      if (!current.moved) {
+        if (current.source === "available") addFood(current.foodName);
+        if (current.source === "selected") removeFood(current.foodName);
+      } else {
+        if (current.source === "available" && insideSelectedZone) addFood(current.foodName);
+        if (current.source === "selected" && !insideSelectedZone) removeFood(current.foodName);
+      }
+
+      setActiveDrag(null);
+    }
+
+    function handlePointerCancel() {
+      setActiveDrag(null);
+    }
+
+    window.addEventListener("pointermove", handlePointerMove, { passive: false });
+    window.addEventListener("pointerup", handlePointerUp, { passive: false });
+    window.addEventListener("pointercancel", handlePointerCancel);
+
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerCancel);
+    };
+  }, [Boolean(activeDrag)]);
+
   function addFood(foodName: string) {
     setSelectedFoodNames((current) => replaceFoodByRole(current, foodName));
   }
@@ -95,31 +169,32 @@ export function MealComposerOverlay({
     setSelectedFoodNames((current) => current.filter((name) => name !== foodName));
   }
 
-  function handleSelectedDrop(event: DragEvent<HTMLDivElement>) {
+  function startDrag(event: ReactPointerEvent<HTMLElement>, source: DragSource, food: FoodWithCategory) {
     event.preventDefault();
     event.stopPropagation();
-    const payload = readDragPayload(event);
-    if (payload?.source === "available") addFood(payload.foodName);
-  }
-
-  function handleOutsideDrop(event: DragEvent<HTMLDivElement>) {
-    event.preventDefault();
-    const payload = readDragPayload(event);
-    if (payload?.source === "selected") removeFood(payload.foodName);
+    setActiveDrag({
+      source,
+      foodName: food.name,
+      label: categoryLabel(food.category, t),
+      role: getMealFoodRole(food),
+      startX: event.clientX,
+      startY: event.clientY,
+      x: event.clientX,
+      y: event.clientY,
+      moved: false
+    });
   }
 
   return (
-    <div className="meal-composer-overlay" role="dialog" aria-modal="true" aria-label={`${dayLabel} ${meal.name} composer`} onDragOver={(event) => event.preventDefault()} onDrop={handleOutsideDrop}>
+    <div className="meal-composer-overlay" role="dialog" aria-modal="true" aria-label={`${dayLabel} ${meal.name} composer`}>
       <button className="meal-composer-backdrop" type="button" aria-label={t.cancel} onClick={onClose} />
 
       <div className="ingredient-orbit" aria-label={t.outside}>
         {options.slice(0, orbit.length).map((food, index) => (
           <button
             className={`ingredient-chip ${getMealFoodRole(food)}`}
-            draggable
             key={food.name}
-            onClick={() => addFood(food.name)}
-            onDragStart={(event) => writeDragPayload(event, { source: "available", foodName: food.name })}
+            onPointerDown={(event) => startDrag(event, "available", food)}
             style={{ left: orbit[index].left, top: orbit[index].top, transform: `rotate(${orbit[index].rotate})` }}
             type="button"
           >
@@ -129,8 +204,8 @@ export function MealComposerOverlay({
         ))}
       </div>
 
-      <section className="meal-composer-card" onDragOver={(event) => event.preventDefault()} onDrop={handleSelectedDrop}>
-        <div className="meal-selected-zone">
+      <section className="meal-composer-card">
+        <div className="meal-selected-zone" ref={selectedZoneRef}>
           <div className="meal-selected-head">
             <span>{t.selected}</span>
           </div>
@@ -138,10 +213,8 @@ export function MealComposerOverlay({
             {selectedFoods.map((food) => (
               <button
                 className={`selected-food-pill ${getMealFoodRole(food)}`}
-                draggable
                 key={food.name}
-                onClick={() => removeFood(food.name)}
-                onDragStart={(event) => writeDragPayload(event, { source: "selected", foodName: food.name })}
+                onPointerDown={(event) => startDrag(event, "selected", food)}
                 type="button"
               >
                 <span>{food.name}</span>
@@ -156,6 +229,13 @@ export function MealComposerOverlay({
           <button className="primary-button no-top-margin" disabled={applyDisabled} type="button" onClick={() => onApply(selectedFoodNames)}>{t.apply}</button>
         </div>
       </section>
+
+      {activeDrag && activeDrag.moved && (
+        <div className={`meal-floating-chip ${activeDrag.role}`} style={{ transform: `translate3d(${activeDrag.x}px, ${activeDrag.y}px, 0)` }}>
+          <span>{activeDrag.label}</span>
+          <strong>{activeDrag.foodName}</strong>
+        </div>
+      )}
     </div>
   );
 }
@@ -176,17 +256,8 @@ function categoryLabel(category: FoodCategory, labels: typeof copy.en | typeof c
   return labels.plants;
 }
 
-function writeDragPayload(event: DragEvent<HTMLElement>, payload: DragPayload) {
-  event.dataTransfer.setData("application/json", JSON.stringify(payload));
-  event.dataTransfer.effectAllowed = payload.source === "available" ? "copy" : "move";
-}
-
-function readDragPayload(event: DragEvent<HTMLElement>): DragPayload | null {
-  try {
-    const raw = event.dataTransfer.getData("application/json");
-    if (!raw) return null;
-    return JSON.parse(raw) as DragPayload;
-  } catch {
-    return null;
-  }
+function isInsideElement(x: number, y: number, element: HTMLElement | null): boolean {
+  if (!element) return false;
+  const rect = element.getBoundingClientRect();
+  return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
 }
