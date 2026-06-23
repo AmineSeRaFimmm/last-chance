@@ -132,6 +132,9 @@
   background: rgba(245, 245, 247, 0.5);
   backdrop-filter: blur(24px) saturate(1.18);
   overflow: hidden;
+  overscroll-behavior: contain;
+  touch-action: none;
+  user-select: none;
 }
 
 .meal-composer-backdrop {
@@ -148,23 +151,28 @@
   pointer-events: none;
 }
 
-.ingredient-chip {
-  position: absolute;
-  z-index: 1;
+.ingredient-chip,
+.meal-floating-chip {
   display: grid;
   gap: 4px;
-  width: min(31vw, 136px);
-  min-height: 58px;
+  width: min(29vw, 128px);
+  min-height: 56px;
   border: 1px solid rgba(255, 255, 255, 0.74);
-  border-radius: 19px;
-  padding: 9px 10px;
+  border-radius: 18px;
+  padding: 8px 10px;
   background: rgba(255, 255, 255, 0.72);
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.08);
   color: var(--text);
   text-align: left;
+  backdrop-filter: blur(18px) saturate(1.18);
+  touch-action: none;
+}
+
+.ingredient-chip {
+  position: absolute;
+  z-index: 1;
   cursor: grab;
   pointer-events: auto;
-  backdrop-filter: blur(18px) saturate(1.18);
 }
 
 .ingredient-chip:active {
@@ -172,6 +180,7 @@
 }
 
 .ingredient-chip span,
+.meal-floating-chip span,
 .meal-selected-head span {
   color: var(--muted);
   font-size: 10px;
@@ -180,37 +189,53 @@
   text-transform: uppercase;
 }
 
-.ingredient-chip strong {
+.ingredient-chip strong,
+.meal-floating-chip strong {
   font-size: 12px;
   line-height: 1.12;
   letter-spacing: -0.02em;
 }
 
 .ingredient-chip.protein,
-.selected-food-pill.protein {
+.selected-food-pill.protein,
+.meal-floating-chip.protein {
   background: rgba(255, 255, 255, 0.78);
 }
 
 .ingredient-chip.carb,
-.selected-food-pill.carb {
+.selected-food-pill.carb,
+.meal-floating-chip.carb {
   background: rgba(255, 250, 238, 0.78);
 }
 
 .ingredient-chip.fat,
-.selected-food-pill.fat {
+.selected-food-pill.fat,
+.meal-floating-chip.fat {
   background: rgba(252, 247, 255, 0.78);
 }
 
 .ingredient-chip.plant,
-.selected-food-pill.plant {
+.selected-food-pill.plant,
+.meal-floating-chip.plant {
   background: rgba(241, 255, 247, 0.78);
+}
+
+.meal-floating-chip {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 6;
+  pointer-events: none;
+  opacity: 0.96;
+  translate: -50% -50%;
+  box-shadow: 0 22px 54px rgba(0, 0, 0, 0.18);
 }
 
 .meal-composer-card {
   position: relative;
   z-index: 2;
-  width: min(82vw, 360px);
-  max-height: min(56vh, 420px);
+  width: min(70vw, 300px);
+  max-height: min(50vh, 380px);
   overflow: auto;
   border: 1px solid rgba(255, 255, 255, 0.78);
   border-radius: 28px;
@@ -228,7 +253,7 @@
 }
 
 .meal-selected-zone {
-  min-height: 138px;
+  min-height: 132px;
   border: 1px dashed rgba(110, 110, 115, 0.32);
   border-radius: 22px;
   padding: 13px;
@@ -252,6 +277,7 @@
   color: var(--text);
   cursor: grab;
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.06);
+  touch-action: none;
 }
 
 .selected-food-pill span {
@@ -296,34 +322,43 @@
 
   .meal-composer-overlay {
     align-items: center;
-    padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+    padding: max(10px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
   }
 
-  .ingredient-chip {
-    width: 112px;
-    min-height: 54px;
-    padding: 8px 9px;
-    border-radius: 17px;
+  .ingredient-orbit {
+    inset: max(8px, env(safe-area-inset-top)) max(4px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(4px, env(safe-area-inset-left));
   }
 
-  .ingredient-chip span {
+  .ingredient-chip,
+  .meal-floating-chip {
+    width: 96px;
+    min-height: 50px;
+    padding: 7px 8px;
+    border-radius: 16px;
+  }
+
+  .ingredient-chip span,
+  .meal-floating-chip span {
     font-size: 9px;
   }
 
-  .ingredient-chip strong {
+  .ingredient-chip strong,
+  .meal-floating-chip strong {
     font-size: 11px;
   }
 
   .meal-composer-card {
-    width: 76vw;
-    max-height: 44vh;
-    padding: 10px;
-    border-radius: 25px;
+    width: 58vw;
+    max-width: 246px;
+    max-height: 42vh;
+    padding: 9px;
+    border-radius: 24px;
   }
 
   .meal-selected-zone {
-    min-height: 116px;
-    padding: 11px;
+    min-height: 110px;
+    padding: 10px;
+    border-radius: 20px;
   }
 
   .selected-food-pill {
@@ -333,5 +368,17 @@
   .selected-food-pill span,
   .selected-food-pill strong {
     font-size: 11px;
+  }
+
+  .meal-composer-actions {
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .meal-composer-actions .secondary-button,
+  .meal-composer-actions .primary-button {
+    padding: 11px 7px;
+    border-radius: 15px;
+    font-size: 12px;
   }
 }
