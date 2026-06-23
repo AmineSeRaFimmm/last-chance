@@ -175,7 +175,7 @@ export function buildCarbCyclingPlan(input: UserInput): CarbCyclingPlanResult {
   const avgCalories = cut.avgCutCalories;
   const weeklyCalories = avgCalories * 7;
   const dayCounts = getCarbCycleDayCounts(input.trainingDaysPerWeek);
-  const proteinG = 2.0 * referenceWeight;
+  const proteinG = input.proteinFactor * referenceWeight;
   const { highCalories, mediumCalories, lowCalories } = calculateDayCalories({
     avgCalories,
     dayCounts,
