@@ -3,7 +3,7 @@ import { buildDietWeek } from "../core/dietPlan";
 import type { DietDay, DietMeal } from "../core/dietPlan";
 import { optimizeMealFromFoodNames, sumDietMeals } from "../core/mealOptimizer";
 import { loadInput } from "../storage/localPlan";
-import { findMealOverride, loadDietOverrides, removeMealOverride, saveMealOverride } from "../storage/dietOverrides";
+import { findMealOverride, loadDietOverrides, saveMealOverride } from "../storage/dietOverrides";
 import type { DietMealOverride } from "../storage/dietOverrides";
 import { MealComposerOverlay } from "./MealComposerOverlay";
 
@@ -13,7 +13,6 @@ interface ComposerState {
   dayLabel: string;
   meal: DietMeal;
   baseMeal: DietMeal;
-  hasOverride: boolean;
 }
 
 const copy = {
@@ -75,21 +74,13 @@ export function DietPlanner() {
     setComposer({
       dayLabel: day.day,
       meal,
-      baseMeal,
-      hasOverride: Boolean(findMealOverride(overrides, day.day, baseMeal.name))
+      baseMeal
     });
   }
 
   function handleApply(foodNames: string[]) {
     if (!composer) return;
     const next = saveMealOverride({ day: composer.dayLabel, mealName: composer.baseMeal.name, foodNames });
-    setOverrides(next);
-    setComposer(null);
-  }
-
-  function handleReset() {
-    if (!composer) return;
-    const next = removeMealOverride(composer.dayLabel, composer.baseMeal.name);
     setOverrides(next);
     setComposer(null);
   }
@@ -122,12 +113,10 @@ export function DietPlanner() {
         <MealComposerOverlay
           baseMeal={composer.baseMeal}
           dayLabel={composer.dayLabel}
-          hasOverride={composer.hasOverride}
           language={language}
           meal={composer.meal}
           onApply={handleApply}
           onClose={() => setComposer(null)}
-          onReset={handleReset}
         />
       )}
     </main>
