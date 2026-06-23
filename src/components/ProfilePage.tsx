@@ -8,6 +8,8 @@ import { ProgressTracker } from "./ProgressTracker";
 
 type Language = "en" | "zh";
 
+const LANGUAGE_KEY = "last_chance_language";
+
 const copy = {
   en: {
     eyebrow: "Personal dashboard",
@@ -54,6 +56,7 @@ const copy = {
 } as const;
 
 export function ProfilePage() {
+  const [language, setLanguage] = useState<Language>(loadLanguage);
   const [source, setSource] = useState(() => buildProfileSource());
 
   useEffect(() => {
@@ -66,12 +69,23 @@ export function ProfilePage() {
     };
   }, []);
 
-  const t = copy[source.language];
+  const t = copy[language];
+
+  function handleLanguageChange(nextLanguage: Language) {
+    setLanguage(nextLanguage);
+    window.localStorage.setItem(LANGUAGE_KEY, nextLanguage);
+  }
 
   return (
     <main className="app-shell profile-shell">
       <section className="hero profile-hero">
-        <p className="eyebrow">{t.eyebrow}</p>
+        <div className="hero-topline">
+          <p className="eyebrow">{t.eyebrow}</p>
+          <div className="language-toggle" aria-label="Language selector">
+            <button className={language === "en" ? "active" : ""} onClick={() => handleLanguageChange("en")} type="button">EN</button>
+            <button className={language === "zh" ? "active" : ""} onClick={() => handleLanguageChange("zh")} type="button">中文</button>
+          </div>
+        </div>
         <h1 className="hero-title">Profile</h1>
         <p className="hero-subtitle">{t.subtitle}</p>
       </section>
@@ -112,7 +126,7 @@ export function ProfilePage() {
       )}
 
       <ProgressTracker
-        language={source.language}
+        language={language}
         plannedDailyCalories={source.plannedDailyCalories}
         expectedWeeklyLossKg={source.expectedWeeklyLossKg}
         defaultWeightKg={source.defaultWeightKg}
@@ -126,12 +140,11 @@ function ProfileMetric({ label, value }: { label: string; value: string }) {
 }
 
 function buildProfileSource() {
-  const language = loadLanguage();
   const savedInput = loadInput();
   const input = savedInput ?? buildDefaultInput();
   const result = buildResult(input);
   const plannedDailyCalories = result.kind === "standard" ? result.daily.calories : Math.round(result.weeklyCalories / 7);
-  return { language, savedInput, plannedDailyCalories, expectedWeeklyLossKg: result.weeklyLossKg, defaultWeightKg: input.weightKg };
+  return { savedInput, plannedDailyCalories, expectedWeeklyLossKg: result.weeklyLossKg, defaultWeightKg: input.weightKg };
 }
 
 function buildResult(input: UserInput): PlanResult {
@@ -155,5 +168,5 @@ function buildDefaultInput(): UserInput {
 
 function loadLanguage(): Language {
   if (typeof window === "undefined") return "en";
-  return window.localStorage.getItem("last_chance_language") === "zh" ? "zh" : "en";
+  return window.localStorage.getItem(LANGUAGE_KEY) === "zh" ? "zh" : "en";
 }
