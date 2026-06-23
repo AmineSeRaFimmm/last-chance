@@ -255,8 +255,8 @@ function WorkoutDayCard({ day, labels, language }: { day: WorkoutDay; labels: ty
       </div>
 
       <div className="workout-intent-grid">
-        <div><span>{labels.intent}</span><strong>{tr(day.intent, language)}</strong></div>
-        <div><span>{labels.intensity}</span><strong>{day.intensity}</strong></div>
+        <div><span>{labels.intent}</span>{" "}<strong>{tr(day.intent, language)}</strong></div>
+        <div><span>{labels.intensity}</span>{" "}<strong>{day.intensity}</strong></div>
       </div>
 
       <div className="exercise-stack">
@@ -271,8 +271,8 @@ function WorkoutDayCard({ day, labels, language }: { day: WorkoutDay; labels: ty
 
       {(day.conditioning || day.recovery) && (
         <div className="workout-note-grid">
-          {day.conditioning && <div><span>{labels.conditioning}</span><strong>{tr(day.conditioning, language)}</strong></div>}
-          {day.recovery && <div><span>{labels.recovery}</span><strong>{tr(day.recovery, language)}</strong></div>}
+          {day.conditioning && <div><span>{labels.conditioning}</span>{" "}<strong>{tr(day.conditioning, language)}</strong></div>}
+          {day.recovery && <div><span>{labels.recovery}</span>{" "}<strong>{tr(day.recovery, language)}</strong></div>}
         </div>
       )}
     </section>
