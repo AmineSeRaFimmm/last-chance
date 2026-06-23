@@ -1,11 +1,57 @@
-.top-nav-shell {
-  padding-bottom: 0;
+body {
+  padding-bottom: calc(92px + env(safe-area-inset-bottom));
 }
 
-.top-nav {
-  position: sticky;
-  top: max(10px, env(safe-area-inset-top));
-  z-index: 5;
-  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.06);
-  backdrop-filter: blur(16px);
+.bottom-nav-shell {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+  pointer-events: none;
+}
+
+.bottom-nav {
+  width: min(560px, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 7px;
+  padding: 8px;
+  border-radius: 28px;
+  background: rgba(247, 247, 249, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(18px);
+  pointer-events: auto;
+}
+
+.bottom-nav button {
+  border: 0;
+  border-radius: 21px;
+  padding: 9px 6px;
+  display: grid;
+  place-items: center;
+  gap: 3px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+}
+
+.bottom-nav button span {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.bottom-nav button.active {
+  background: #111111;
+  color: #ffffff;
+}
+
+.bottom-nav button:active {
+  transform: scale(0.98);
 }
