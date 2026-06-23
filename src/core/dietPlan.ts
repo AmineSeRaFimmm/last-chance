@@ -88,6 +88,24 @@ const dairy: FoodItem[] = [
   { name: "Soy milk", kcal: 54, protein: 3.3, carbs: 6, fat: 1.8 }
 ];
 
+export const FOOD_CATALOG = { proteins, carbs, vegetables, fruits, fats, dairy } as const;
+export type FoodCategory = keyof typeof FOOD_CATALOG;
+export type FoodWithCategory = FoodItem & { category: FoodCategory };
+
+export function getAllFoods(): FoodWithCategory[] {
+  return Object.entries(FOOD_CATALOG).flatMap(([category, foods]) =>
+    foods.map((food) => ({ ...food, category: category as FoodCategory }))
+  );
+}
+
+export function getFoodByName(name: string): FoodWithCategory | null {
+  return getAllFoods().find((food) => food.name === name) ?? null;
+}
+
+export function getFoodCategory(name: string): FoodCategory | null {
+  return getFoodByName(name)?.category ?? null;
+}
+
 export function buildDietWeek(input: UserInput): DietDay[] {
   const result = buildResult(input);
 
