@@ -1,29 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CarbCyclingPlanResult } from "../core/types";
+import {
+  loadCarbRotationOffset,
+  loadTrainingFocusByDay,
+  saveCarbRotationOffset,
+  saveTrainingFocusByDay,
+  type FocusByDay,
+  type TrainingFocusKey
+} from "../storage/weeklyStructurePreferences";
 
 type CarbType = "High" | "Medium" | "Low";
-type TrainingFocusKey =
-  | "heavyLegs"
-  | "backDeadlift"
-  | "upperBody"
-  | "push"
-  | "pull"
-  | "fullBody"
-  | "strength"
-  | "accessoryCardio"
-  | "lightCardio"
-  | "walkRecovery"
-  | "rest";
 
 type Labels = {
   weeklyStructure: string;
   highNote: string;
 };
 
-type FocusByDay = Record<string, TrainingFocusKey>;
-
-const ROTATION_KEY = "last_chance_carb_rotation_offset";
-const FOCUS_KEY = "last_chance_training_focus_by_day";
 const SWIPE_THRESHOLD_PX = 34;
 
 const TRAINING_OPTIONS: TrainingFocusKey[] = [
@@ -64,16 +56,16 @@ export default function CarbCyclingWeeklyStructure({
   const isZh = labels.weeklyStructure === "一周结构";
   const copy = getCopy(isZh);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [rotationOffset, setRotationOffset] = useState(loadRotationOffset);
-  const [focusByDay, setFocusByDay] = useState<FocusByDay>(loadFocusByDay);
+  const [rotationOffset, setRotationOffset] = useState(loadCarbRotationOffset);
+  const [focusByDay, setFocusByDay] = useState<FocusByDay>(loadTrainingFocusByDay);
   const [swipeStart, setSwipeStart] = useState<{ y: number; offset: number } | null>(null);
 
   useEffect(() => {
-    window.localStorage.setItem(ROTATION_KEY, String(rotationOffset));
+    saveCarbRotationOffset(rotationOffset);
   }, [rotationOffset]);
 
   useEffect(() => {
-    window.localStorage.setItem(FOCUS_KEY, JSON.stringify(focusByDay));
+    saveTrainingFocusByDay(focusByDay);
   }, [focusByDay]);
 
   useEffect(() => {
@@ -137,12 +129,7 @@ export default function CarbCyclingWeeklyStructure({
     <section className="card weekly-structure-card">
       <div className="weekly-structure-header">
         <div className="card-title">{labels.weeklyStructure}</div>
-        <button
-          className="adjust-button"
-          type="button"
-          aria-haspopup="dialog"
-          onClick={() => setIsEditorOpen(true)}
-        >
+        <button className="adjust-button" type="button" aria-haspopup="dialog" onClick={() => setIsEditorOpen(true)}>
           {isZh ? "调整" : "Adjust"}
         </button>
       </div>
@@ -174,9 +161,7 @@ export default function CarbCyclingWeeklyStructure({
                 <strong>{copy.editorTitle}</strong>
                 <span>{copy.editorHint}</span>
               </div>
-              <button className="weekly-adjust-done" type="button" onClick={() => setIsEditorOpen(false)}>
-                {copy.done}
-              </button>
+              <button className="weekly-adjust-done" type="button" onClick={() => setIsEditorOpen(false)}>{copy.done}</button>
             </div>
 
             <div className={`weekly-adjust-grid ${swipeStart ? "is-swiping" : ""}`}>
@@ -210,9 +195,7 @@ export default function CarbCyclingWeeklyStructure({
                     onChange={(event) => handleFocusChange(row.day, event.target.value as TrainingFocusKey)}
                   >
                     {TRAINING_OPTIONS.map((option) => (
-                      <option key={option} value={option}>
-                        {getFocusLabel(option, isZh)}
-                      </option>
+                      <option key={option} value={option}>{getFocusLabel(option, isZh)}</option>
                     ))}
                   </select>
                 </div>
@@ -237,7 +220,7 @@ function rotateCarbTypes(types: CarbType[], offset: number): CarbType[] {
   return types.map((_, index) => types[(index - normalizedOffset + types.length) % types.length]);
 }
 
-function inferTrainingFocus(note: string): TrainingFocusKey {
+export function inferTrainingFocus(note: string): TrainingFocusKey {
   const normalized = note.toLowerCase();
 
   if (normalized.includes("deadlift") || normalized.includes("back")) return "backDeadlift";
@@ -251,25 +234,8 @@ function inferTrainingFocus(note: string): TrainingFocusKey {
   return "strength";
 }
 
-function getFocusLabel(focusKey: TrainingFocusKey, isZh: boolean): string {
+export function getFocusLabel(focusKey: TrainingFocusKey, isZh: boolean): string {
   return FOCUS_LABELS[focusKey][isZh ? "zh" : "en"];
-}
-
-function loadRotationOffset(): number {
-  if (typeof window === "undefined") return 0;
-  const value = Number(window.localStorage.getItem(ROTATION_KEY) ?? 0);
-  return Number.isFinite(value) ? value : 0;
-}
-
-function loadFocusByDay(): FocusByDay {
-  if (typeof window === "undefined") return {};
-
-  try {
-    const value = JSON.parse(window.localStorage.getItem(FOCUS_KEY) ?? "{}");
-    return value && typeof value === "object" ? value : {};
-  } catch {
-    return {};
-  }
 }
 
 function getCopy(isZh: boolean) {
