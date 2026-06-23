@@ -41,7 +41,10 @@ interface DayBalanceEntry {
   max: number;
 }
 
+type CarbDietType = "High" | "Medium" | "Low";
+
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const TEMPLATE_CANDIDATE_SEEDS = Array.from({ length: 12 }, (_, index) => index);
 
 const proteins: FoodItem[] = [
   { name: "Chicken breast", kcal: 165, protein: 31, carbs: 0, fat: 3.6 },
@@ -120,9 +123,9 @@ export function buildDietWeek(input: UserInput): DietDay[] {
 
   if (result.kind === "carbCycling") {
     const adjustedSchedule = applyCarbRotation(result.weeklySchedule, loadCarbRotationOffset());
-    return adjustedSchedule.map((schedule, index) =>
-      buildDietDay(schedule.day, schedule.type, getCarbTarget(result, schedule.type), index)
-    );
+    const templates = buildCarbDietTemplates(result);
+
+    return adjustedSchedule.map((schedule) => cloneDietDay(schedule.day, templates[schedule.type]));
   }
 
   return DAYS.map((day, index) => buildDietDay(day, "Standard", result.daily, index));
@@ -136,7 +139,7 @@ function buildResult(input: UserInput): PlanResult {
   return buildStandardPlan(input);
 }
 
-function applyCarbRotation<T extends { type: "High" | "Medium" | "Low" }>(schedule: T[], offset: number): T[] {
+function applyCarbRotation<T extends { type: CarbDietType }>(schedule: T[], offset: number): T[] {
   if (schedule.length === 0) return schedule;
   const types = schedule.map((row) => row.type);
   const normalizedOffset = ((offset % types.length) + types.length) % types.length;
@@ -146,7 +149,51 @@ function applyCarbRotation<T extends { type: "High" | "Medium" | "Low" }>(schedu
   }));
 }
 
-function getCarbTarget(result: Extract<PlanResult, { kind: "carbCycling" }>, type: "High" | "Medium" | "Low"): MacroResult {
+function buildCarbDietTemplates(result: Extract<PlanResult, { kind: "carbCycling" }>): Record<CarbDietType, DietDay> {
+  return {
+    High: buildBestDietTemplate("High", result.highDay),
+    Medium: buildBestDietTemplate("Medium", result.mediumDay),
+    Low: buildBestDietTemplate("Low", result.lowDay)
+  };
+}
+
+function buildBestDietTemplate(type: CarbDietType, target: MacroResult): DietDay {
+  return TEMPLATE_CANDIDATE_SEEDS
+    .map((seed) => buildDietDay(type, type, target, seed))
+    .reduce((best, candidate) => scoreMacroDistance(candidate.totals, target) < scoreMacroDistance(best.totals, target) ? candidate : best);
+}
+
+function cloneDietDay(day: string, template: DietDay): DietDay {
+  return {
+    day,
+    type: template.type,
+    target: { ...template.target },
+    meals: template.meals.map(cloneMeal),
+    totals: { ...template.totals }
+  };
+}
+
+function cloneMeal(meal: DietMeal): DietMeal {
+  return {
+    name: meal.name,
+    items: meal.items.map((item) => ({ ...item })),
+    calories: meal.calories,
+    proteinG: meal.proteinG,
+    carbsG: meal.carbsG,
+    fatG: meal.fatG
+  };
+}
+
+function scoreMacroDistance(macro: MacroResult, target: MacroResult): number {
+  const calorieError = normalize(macro.calories - target.calories, 35);
+  const proteinError = normalize(macro.proteinG - target.proteinG, 6);
+  const carbsError = normalize(macro.carbsG - target.carbsG, 8);
+  const fatError = normalize(macro.fatG - target.fatG, 4);
+
+  return 4 * calorieError ** 2 + 3 * proteinError ** 2 + 2.5 * carbsError ** 2 + 2.5 * fatError ** 2;
+}
+
+function getCarbTarget(result: Extract<PlanResult, { kind: "carbCycling" }>, type: CarbDietType): MacroResult {
   if (type === "High") return result.highDay;
   if (type === "Medium") return result.mediumDay;
   return result.lowDay;
