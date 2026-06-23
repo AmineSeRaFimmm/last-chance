@@ -20,6 +20,68 @@ type Language = "en" | "zh";
 
 const PROGRAM_KEY = "last_chance_workout_program";
 
+const zhText: Record<string, string> = {
+  "Default fat-loss program matched to saved nutrition and weekly structure.": "根据保存的饮食方案和一周结构自动匹配的默认减脂训练。",
+  "Default workout week aligned to your carb cycling structure.": "默认训练周会对齐你的碳水循环结构。",
+  "Default fat-loss workout week matched to your training frequency.": "默认训练周会匹配你的训练频率和减脂目标。",
+  "Training stress is matched to high, medium, and low carb days from your saved weekly structure.": "训练压力会根据你保存的一周结构匹配高碳日、中碳日和低碳日。",
+  "Four main-lift days with conservative assistance and recovery-first conditioning.": "四个主项训练日，辅助量保守，体能训练优先服从恢复。",
+  "Volume / recovery / intensity structure, compressed for calorie deficit recovery.": "保留容量 / 恢复 / 强度结构，但针对热量缺口压缩训练压力。",
+  "Three full-body barbell sessions built around squat, press, bench, deadlift, and rows.": "三个全身杠铃训练日，围绕深蹲、推举、卧推、硬拉和划船。",
+  "Hypertrophy-oriented split with cut-adjusted volume and non-failure execution.": "偏增肌的分化训练，但训练量按减脂期恢复能力下调，避免力竭。",
+  "Balanced four-day split with clear recovery days and repeatable progression.": "均衡四日分化，恢复日清晰，便于稳定进步。",
+  "Three full-body sessions emphasizing large patterns and moderate joint stress.": "三个全身训练日，强调大动作模式和适中的关节压力。",
+  "Stable machine-based plan that reduces technical complexity and injury risk.": "以稳定器械为主，降低技术复杂度和受伤风险。",
+  "Four sessions using machines and cables with controlled fatigue.": "四个器械 / 绳索训练日，疲劳更可控。",
+  "Strength primer plus short conditioning blocks, avoiding excessive cut fatigue.": "力量启动训练加短体能模块，避免减脂期疲劳过度。",
+  "Simple mixed-modal training with skill practice, strength, and controlled finishers.": "简化混合训练，包含技术练习、力量和可控收尾体能。",
+  "Low-friction strength plan for muscle retention, steps, and recovery.": "低门槛力量计划，重点是保肌肉、步数和恢复。",
+  "Dumbbells, bands, bodyweight, walking, and simple progressive overload.": "哑铃、弹力带、自重、步行和简单渐进超负荷。",
+  "Most users who want the app to control recovery and adherence.": "大多数希望由 App 控制恢复和执行难度的用户。",
+  "Intermediate lifters who want strength retention during a cut.": "减脂期想保留力量的中级训练者。",
+  "Experienced barbell trainees who tolerate heavy weekly loading.": "能承受较高周负荷的有经验杠铃训练者。",
+  "Novice lifters who can still progress linearly.": "仍能线性进步的新手力量训练者。",
+  "Gym users training 4–6 days per week.": "每周训练 4–6 天的健身房用户。",
+  "Most fat-loss users with 3–4 lifting days.": "多数每周 3–4 次力量训练的减脂用户。",
+  "Busy users or beginners who need high consistency.": "时间紧或需要稳定执行的新手用户。",
+  "Beginners, hotel gyms, or users who prefer guided equipment.": "新手、酒店健身房用户，或偏好固定器械的人。",
+  "Gym users cutting hard but wanting predictable execution.": "减脂较激进但希望动作执行稳定的健身房用户。",
+  "Conditioning-focused users with solid movement skill.": "动作基础扎实、偏体能训练的用户。",
+  "Users who want CrossFit-style variety without advanced Olympic lifting.": "想要 CrossFit 风格变化，但不需要高级奥举动作的用户。",
+  "General fat-loss users who do not need sport specialization.": "不需要专项竞技化训练的普通减脂用户。",
+  "Home training or travel weeks.": "居家训练或旅行周。",
+  "High-carb days carry the hardest strength work; low-carb days protect recovery.": "高碳日承接最重的力量训练；低碳日优先保护恢复。",
+  "Keep 1–3 reps in reserve on most sets during aggressive cuts.": "减脂较激进时，大多数训练组保留 1–3 次余力。",
+  "Conditioning should support fat loss without stealing recovery from heavy sessions.": "体能训练应服务减脂，但不能抢走重训练日的恢复资源。",
+  "Train each major pattern at least twice weekly when possible.": "条件允许时，每个主要动作模式每周至少训练两次。",
+  "Use progressive overload, but do not chase personal records during hard deficits.": "使用渐进超负荷，但热量缺口较大时不要追求 PR。",
+  "Steps and low-intensity cardio are the default conditioning tools.": "步数和低强度有氧是默认体能工具。",
+  "Push performance on the heaviest work while avoiding failure reps.": "在最重训练中提高表现，但避免力竭次数。",
+  "Accumulate quality work with moderate fatigue.": "累积高质量训练量，同时控制疲劳。",
+  "Protect recovery and maintain movement quality.": "保护恢复，保持动作质量。",
+  "Recover, maintain steps, and lower fatigue.": "恢复、保持步数，并降低疲劳。",
+  "Preserve lean mass and strength while cutting.": "减脂期保留瘦体重和力量。",
+  "Optional 8–10 min easy cooldown only.": "只建议 8–10 分钟轻松冷身，可选。",
+  "10–20 min incline walk or bike after lifting if recovery is good.": "恢复良好时，力量后可做 10–20 分钟坡走或单车。",
+  "MetCon stays short enough that technique does not degrade.": "MetCon 保持足够短，避免技术动作变形。",
+  "Zone 2 only.": "仅做 Zone 2。",
+  "Prioritize steps, sleep, hydration, and no failure training.": "优先保证步数、睡眠、补水，不做力竭训练。",
+  "Progress load only when bar speed and form stay consistent.": "只有杠速和动作质量稳定时才增加重量。",
+  "Carb cycling alignment stays active.": "仍会跟随你的碳水循环结构进行训练日匹配。",
+  "Default plan follows your saved fat-loss setup.": "默认训练会跟随你保存的减脂设置。",
+  "keep 2–3 reps in reserve": "保留 2–3 次余力",
+  "stop 1–2 reps before failure": "距离力竭保留 1–2 次",
+  "use training max, no grinders during a cut": "使用 training max，减脂期不要硬磨极限次数",
+  "reduce load 5–10% if recovery drops": "恢复下降时重量降低 5–10%",
+  "alternate each session": "每次训练交替安排",
+  "deadlift volume stays low during a cut": "减脂期硬拉训练量保持偏低",
+  "simple gymnastics, carries, or technique": "简单体操、负重行走或技术练习",
+  "submaximal, crisp reps": "次最大强度，动作干净利落",
+  "avoid redline failure during aggressive cuts": "激进减脂期避免冲到崩溃强度",
+  "easy nasal-breathing pace": "轻松到能鼻呼吸的强度",
+  "hips, T-spine, ankles, shoulders": "髋、胸椎、踝、肩"
+};
+
 const copy = {
   en: {
     eyebrow: "Training system",
@@ -126,29 +188,29 @@ export function WorkoutPlanner() {
           </button>
         </div>
         <h1 className="hero-title">Workout</h1>
-        <p className="hero-subtitle">{plan.subtitle}</p>
+        <p className="hero-subtitle">{tr(plan.subtitle, language)}</p>
       </section>
 
       <section className="card workout-program-card">
         <div>
           <div className="card-title">{plan.title}</div>
-          <p className="small-note no-margin">{plan.program.description}</p>
+          <p className="small-note no-margin">{tr(plan.program.description, language)}</p>
         </div>
         <div className="program-best-for">
           <span>{t.bestFor}</span>
-          <strong>{plan.program.bestFor}</strong>
+          <strong>{tr(plan.program.bestFor, language)}</strong>
         </div>
       </section>
 
       <section className="card">
         <div className="card-title">{t.principles}</div>
         <div className="principle-stack">
-          {plan.principles.map((principle) => <div className="principle-line" key={principle}>{principle}</div>)}
+          {plan.principles.map((principle) => <div className="principle-line" key={principle}>{tr(principle, language)}</div>)}
         </div>
       </section>
 
       <div className="workout-week-stack">
-        {plan.days.map((day) => <WorkoutDayCard day={day} labels={t} key={day.day} />)}
+        {plan.days.map((day) => <WorkoutDayCard day={day} labels={t} language={language} key={day.day} />)}
       </div>
 
       {selectorOpen && (
@@ -158,7 +220,7 @@ export function WorkoutPlanner() {
             <div className="workout-selector-head">
               <div>
                 <strong>{t.chooseSystem}</strong>
-                <span>{result.kind === "carbCycling" ? "Carb cycling alignment stays active." : "Default plan follows your saved fat-loss setup."}</span>
+                <span>{tr(result.kind === "carbCycling" ? "Carb cycling alignment stays active." : "Default plan follows your saved fat-loss setup.", language)}</span>
               </div>
               <button type="button" onClick={() => setSelectorOpen(false)}>{t.done}</button>
             </div>
@@ -169,7 +231,7 @@ export function WorkoutPlanner() {
                 {options.map((option) => (
                   <button className={`program-option ${programId === option.id ? "active" : ""}`} type="button" onClick={() => chooseProgram(option.id)} key={option.id}>
                     <strong>{option.name}</strong>
-                    <span>{option.description}</span>
+                    <span>{tr(option.description, language)}</span>
                   </button>
                 ))}
               </div>
@@ -181,7 +243,7 @@ export function WorkoutPlanner() {
   );
 }
 
-function WorkoutDayCard({ day, labels }: { day: WorkoutDay; labels: typeof copy.en | typeof copy.zh }) {
+function WorkoutDayCard({ day, labels, language }: { day: WorkoutDay; labels: typeof copy.en | typeof copy.zh; language: Language }) {
   return (
     <section className="card workout-day-card">
       <div className="workout-day-head">
@@ -193,7 +255,7 @@ function WorkoutDayCard({ day, labels }: { day: WorkoutDay; labels: typeof copy.
       </div>
 
       <div className="workout-intent-grid">
-        <div><span>{labels.intent}</span><strong>{day.intent}</strong></div>
+        <div><span>{labels.intent}</span><strong>{tr(day.intent, language)}</strong></div>
         <div><span>{labels.intensity}</span><strong>{day.intensity}</strong></div>
       </div>
 
@@ -202,19 +264,25 @@ function WorkoutDayCard({ day, labels }: { day: WorkoutDay; labels: typeof copy.
           <div className="exercise-row" key={`${day.day}-${exercise.name}`}>
             <strong>{exercise.name}</strong>
             <span>{exercise.prescription}</span>
-            {exercise.note && <em>{exercise.note}</em>}
+            {exercise.note && <em>{tr(exercise.note, language)}</em>}
           </div>
         ))}
       </div>
 
       {(day.conditioning || day.recovery) && (
         <div className="workout-note-grid">
-          {day.conditioning && <div><span>{labels.conditioning}</span><strong>{day.conditioning}</strong></div>}
-          {day.recovery && <div><span>{labels.recovery}</span><strong>{day.recovery}</strong></div>}
+          {day.conditioning && <div><span>{labels.conditioning}</span><strong>{tr(day.conditioning, language)}</strong></div>}
+          {day.recovery && <div><span>{labels.recovery}</span><strong>{tr(day.recovery, language)}</strong></div>}
         </div>
       )}
     </section>
   );
+}
+
+function tr(value: string, language: Language): string {
+  if (language !== "zh") return value;
+  if (value.startsWith("Built around ")) return value.replace("Built around", "围绕").replace("training days, progressive overload, steps, and recovery.", "个训练日、渐进超负荷、步数和恢复生成。");
+  return zhText[value] ?? value;
 }
 
 function buildResult(input: UserInput): PlanResult {
