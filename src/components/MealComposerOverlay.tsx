@@ -56,18 +56,22 @@ const copy = {
 } as const;
 
 const orbit = [
-  { left: "2%", top: "5%", rotate: "-5deg" },
-  { left: "68%", top: "5%", rotate: "3deg" },
-  { left: "7%", top: "18%", rotate: "4deg" },
-  { left: "76%", top: "20%", rotate: "-6deg" },
-  { left: "3%", top: "37%", rotate: "-3deg" },
-  { left: "80%", top: "39%", rotate: "5deg" },
-  { left: "4%", top: "60%", rotate: "2deg" },
-  { left: "74%", top: "62%", rotate: "-4deg" },
-  { left: "10%", top: "80%", rotate: "3deg" },
-  { left: "62%", top: "81%", rotate: "-2deg" },
+  { left: "2%", top: "4%", rotate: "-5deg" },
+  { left: "69%", top: "4%", rotate: "3deg" },
+  { left: "8%", top: "15%", rotate: "4deg" },
+  { left: "77%", top: "17%", rotate: "-6deg" },
   { left: "31%", top: "7%", rotate: "5deg" },
-  { left: "35%", top: "86%", rotate: "-6deg" }
+  { left: "52%", top: "10%", rotate: "-3deg" },
+  { left: "3%", top: "34%", rotate: "-3deg" },
+  { left: "80%", top: "35%", rotate: "5deg" },
+  { left: "4%", top: "57%", rotate: "2deg" },
+  { left: "75%", top: "58%", rotate: "-4deg" },
+  { left: "10%", top: "75%", rotate: "3deg" },
+  { left: "64%", top: "76%", rotate: "-2deg" },
+  { left: "34%", top: "84%", rotate: "-6deg" },
+  { left: "51%", top: "86%", rotate: "4deg" },
+  { left: "2%", top: "87%", rotate: "-4deg" },
+  { left: "78%", top: "86%", rotate: "5deg" }
 ];
 
 export function MealComposerOverlay({
