@@ -1,6 +1,7 @@
 import { buildSafeCarbCyclingPlan } from "./carbCyclingSafePlan";
 import { buildStandardPlan } from "./standardPlan";
 import type { MacroResult, PlanResult, UserInput } from "./types";
+import { loadCarbRotationOffset } from "../storage/weeklyStructurePreferences";
 
 export interface FoodItem {
   name: string;
@@ -118,7 +119,8 @@ export function buildDietWeek(input: UserInput): DietDay[] {
   const result = buildResult(input);
 
   if (result.kind === "carbCycling") {
-    return result.weeklySchedule.map((schedule, index) =>
+    const adjustedSchedule = applyCarbRotation(result.weeklySchedule, loadCarbRotationOffset());
+    return adjustedSchedule.map((schedule, index) =>
       buildDietDay(schedule.day, schedule.type, getCarbTarget(result, schedule.type), index)
     );
   }
@@ -132,6 +134,16 @@ function buildResult(input: UserInput): PlanResult {
   }
 
   return buildStandardPlan(input);
+}
+
+function applyCarbRotation<T extends { type: "High" | "Medium" | "Low" }>(schedule: T[], offset: number): T[] {
+  if (schedule.length === 0) return schedule;
+  const types = schedule.map((row) => row.type);
+  const normalizedOffset = ((offset % types.length) + types.length) % types.length;
+  return schedule.map((row, index) => ({
+    ...row,
+    type: types[(index - normalizedOffset + types.length) % types.length]
+  }));
 }
 
 function getCarbTarget(result: Extract<PlanResult, { kind: "carbCycling" }>, type: "High" | "Medium" | "Low"): MacroResult {
@@ -208,31 +220,11 @@ function balanceMealsToTarget(meals: DietMeal[], target: MacroResult): DietMeal[
   let bestScore = scoreDayEntries(entries, target);
 
   for (const step of [80, 40, 20, 10, 5]) {
-    for (let round = 0; round < 14; round += 1) {
-      let improved = false;
-
-      entries = entries.map((entry, index) => {
-        let bestEntry = entry;
-
-        for (const direction of [-1, 1]) {
-          const candidate = {
-            ...entry,
-            grams: clamp(roundToFive(entry.grams + direction * step), entry.min, entry.max)
-          };
-          const nextEntries = entries.map((item, itemIndex) => (itemIndex === index ? candidate : item));
-          const nextScore = scoreDayEntries(nextEntries, target);
-
-          if (nextScore < bestScore) {
-            bestScore = nextScore;
-            bestEntry = candidate;
-            improved = true;
-          }
-        }
-
-        return bestEntry;
-      });
-
-      if (!improved) break;
+    for (let round = 0; round < 80; round += 1) {
+      const next = findBestDayMove(entries, target, step, bestScore);
+      if (!next) break;
+      entries = next.entries;
+      bestScore = next.score;
     }
   }
 
@@ -244,15 +236,38 @@ function balanceMealsToTarget(meals: DietMeal[], target: MacroResult): DietMeal[
   ));
 }
 
+function findBestDayMove(entries: DayBalanceEntry[], target: MacroResult, step: number, currentScore: number): { entries: DayBalanceEntry[]; score: number } | null {
+  let bestEntries: DayBalanceEntry[] | null = null;
+  let bestScore = currentScore;
+
+  entries.forEach((entry, index) => {
+    [-1, 1].forEach((direction) => {
+      const grams = clamp(roundToFive(entry.grams + direction * step), entry.min, entry.max);
+      if (grams === entry.grams) return;
+
+      const candidate = { ...entry, grams };
+      const nextEntries = entries.map((item, itemIndex) => (itemIndex === index ? candidate : item));
+      const nextScore = scoreDayEntries(nextEntries, target);
+
+      if (nextScore < bestScore - 1e-9) {
+        bestScore = nextScore;
+        bestEntries = nextEntries;
+      }
+    });
+  });
+
+  return bestEntries ? { entries: bestEntries, score: bestScore } : null;
+}
+
 function scoreDayEntries(entries: DayBalanceEntry[], target: MacroResult): number {
   const macro = calculateEntries(entries);
-  const calorieError = normalize(macro.calories - target.calories, Math.max(600, target.calories));
-  const proteinError = normalize(macro.proteinG - target.proteinG, Math.max(25, target.proteinG));
-  const carbsError = normalize(macro.carbsG - target.carbsG, Math.max(35, target.carbsG));
-  const fatError = normalize(macro.fatG - target.fatG, Math.max(15, target.fatG));
+  const calorieError = normalize(macro.calories - target.calories, 35);
+  const proteinError = normalize(macro.proteinG - target.proteinG, 6);
+  const carbsError = normalize(macro.carbsG - target.carbsG, 8);
+  const fatError = normalize(macro.fatG - target.fatG, 4);
   const gramPenalty = entries.reduce((sum, entry) => sum + Math.pow((entry.grams - defaultGramsForCategory(entry.food.category)) / 260, 2), 0);
 
-  return 10 * calorieError ** 2 + 4 * proteinError ** 2 + 3 * carbsError ** 2 + 3 * fatError ** 2 + 0.1 * gramPenalty;
+  return 4 * calorieError ** 2 + 3 * proteinError ** 2 + 2.5 * carbsError ** 2 + 2.5 * fatError ** 2 + 0.015 * gramPenalty;
 }
 
 function calculateEntries(entries: DayBalanceEntry[]): MacroResult {
@@ -271,13 +286,13 @@ function calculateEntries(entries: DayBalanceEntry[]): MacroResult {
 }
 
 function boundsForFood(food: FoodWithCategory): { min: number; max: number } {
-  if (food.category === "proteins") return { min: 70, max: 300 };
-  if (food.category === "carbs") return { min: 50, max: 360 };
-  if (food.category === "vegetables") return { min: 80, max: 260 };
-  if (food.category === "fruits") return { min: 60, max: 260 };
-  if (food.category === "dairy") return { min: 100, max: 320 };
-  if (food.name === "Olive oil") return { min: 3, max: 20 };
-  return { min: 5, max: 40 };
+  if (food.category === "proteins") return { min: 40, max: 360 };
+  if (food.category === "carbs") return { min: 5, max: 420 };
+  if (food.category === "vegetables") return { min: 50, max: 300 };
+  if (food.category === "fruits") return { min: 5, max: 280 };
+  if (food.category === "dairy") return { min: 60, max: 360 };
+  if (food.name === "Olive oil") return { min: 3, max: 25 };
+  return { min: 3, max: 55 };
 }
 
 function defaultGramsForCategory(category: FoodCategory): number {
