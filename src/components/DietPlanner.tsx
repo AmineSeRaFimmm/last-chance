@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type PointerEvent } from "react";
 import { buildDietWeek } from "../core/dietPlan";
 import type { DietDay, DietMeal } from "../core/dietPlan";
 import { optimizeMealFromFoodNames, sumDietMeals } from "../core/mealOptimizer";
@@ -201,7 +201,7 @@ function DietMealTile({
     }
   }
 
-  function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
+  function handlePointerDown(event: PointerEvent<HTMLDivElement>) {
     startPointRef.current = { x: event.clientX, y: event.clientY };
     timerRef.current = window.setTimeout(() => {
       timerRef.current = null;
@@ -209,7 +209,7 @@ function DietMealTile({
     }, 520);
   }
 
-  function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
+  function handlePointerMove(event: PointerEvent<HTMLDivElement>) {
     if (!startPointRef.current) return;
     const deltaX = Math.abs(event.clientX - startPointRef.current.x);
     const deltaY = Math.abs(event.clientY - startPointRef.current.y);
