@@ -1,7 +1,7 @@
 import { useRef, useState, type PointerEvent } from "react";
 import { buildDietWeek } from "../core/dietPlan";
 import type { DietDay, DietMeal } from "../core/dietPlan";
-import { optimizeMealFromFoodNames, sumDietMeals } from "../core/mealOptimizer";
+import { getMealFoodOptions, getMealFoodRole, optimizeMealFromFoodNames, sumDietMeals } from "../core/mealOptimizer";
 import { loadInput } from "../storage/localPlan";
 import { findMealOverride, loadDietOverrides, saveMealOverride } from "../storage/dietOverrides";
 import type { DietMealOverride } from "../storage/dietOverrides";
@@ -222,7 +222,7 @@ function DietMealTile({
       </div>
       <div className="diet-food-list">
         {meal.items.map((item) => (
-          <span key={`${meal.name}-${item.name}`}>{item.name} {item.grams}g</span>
+          <span className={getFoodRoleClass(item.name)} key={`${meal.name}-${item.name}`}>{item.name} {item.grams}g</span>
         ))}
       </div>
       <div className="diet-macro-line">
@@ -232,6 +232,11 @@ function DietMealTile({
       </div>
     </div>
   );
+}
+
+function getFoodRoleClass(foodName: string): string {
+  const food = getMealFoodOptions().find((item) => item.name === foodName);
+  return food ? getMealFoodRole(food) : "";
 }
 
 function applyOverridesToWeek(baseWeek: DietDay[], overrides: DietMealOverride[]): DietDay[] {
