@@ -29,10 +29,6 @@ function loadLanguage(): Language {
   return stored === "zh" ? "zh" : "en";
 }
 
-function saveLanguage(language: Language) {
-  window.localStorage.setItem(LANGUAGE_KEY, language);
-}
-
 const copy = {
   en: {
     eyebrow: "Evidence-based planner",
@@ -164,7 +160,7 @@ const copy = {
 export default function App() {
   const savedInput = typeof window !== "undefined" ? loadInput() : null;
 
-  const [language, setLanguage] = useState<Language>(loadLanguage());
+  const [language] = useState<Language>(loadLanguage());
   const [sex, setSex] = useState<Sex>(savedInput?.sex ?? "male");
   const [planType, setPlanType] = useState<PlanType>(savedInput?.planType ?? "standard");
   const [age, setAge] = useState(savedInput?.age ?? 30);
@@ -205,11 +201,6 @@ export default function App() {
 
   useEffect(() => setSaved(false), [result, timelineRisk]);
 
-  function handleLanguageChange(nextLanguage: Language) {
-    setLanguage(nextLanguage);
-    saveLanguage(nextLanguage);
-  }
-
   function handleSexChange(nextSex: Sex) {
     setSex(nextSex);
     if (nextSex === "female") {
@@ -231,10 +222,9 @@ export default function App() {
       <section className="hero">
         <div className="hero-topline">
           <p className="eyebrow">{t.eyebrow}</p>
-          <div className="language-toggle" aria-label="Language selector">
-            <button className={language === "en" ? "active" : ""} onClick={() => handleLanguageChange("en")} type="button">EN</button>
-            <button className={language === "zh" ? "active" : ""} onClick={() => handleLanguageChange("zh")} type="button">中文</button>
-          </div>
+          <button className="change-plan-button" disabled={timelineRisk.blocked} onClick={handleSave} type="button">
+            {timelineRisk.blocked ? t.adjustTimeline : saved ? t.savedLocal : t.saveLocal}
+          </button>
         </div>
         <h1 className="hero-title">Last Chance</h1>
         <p className="hero-subtitle">{t.subtitle}</p>
@@ -279,9 +269,6 @@ export default function App() {
           <NumberField label={t.protein} value={proteinFactor} min={1.4} max={2.4} step={0.1} onChange={setProteinFactor} />
         </div>
         <TimelineRiskPanel risk={timelineRisk} />
-        <button className="primary-button" disabled={timelineRisk.blocked} onClick={handleSave} type="button">
-          {timelineRisk.blocked ? t.adjustTimeline : saved ? t.savedLocal : t.saveLocal}
-        </button>
       </section>
 
       <section className="card accent-card">
