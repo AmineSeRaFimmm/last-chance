@@ -82,7 +82,7 @@ export function optimizeMealFromFoodNames(mealName: string, target: MealTarget, 
   const fatDelta = meal.fatG - target.fatG;
   const status = !hasProtein
     ? "needs-protein"
-    : Math.abs(calorieDelta) <= 30 && Math.abs(proteinDelta) <= 8 && Math.abs(carbsDelta) <= 10 && Math.abs(fatDelta) <= 6
+    : Math.abs(calorieDelta) <= 20 && Math.abs(proteinDelta) <= 5 && Math.abs(carbsDelta) <= 6 && Math.abs(fatDelta) <= 3
       ? "balanced"
       : "adjusted";
 
@@ -108,7 +108,7 @@ function coordinateOptimize(entries: OptimizerEntry[], target: MealTarget): Opti
   let bestScore = scoreEntries(current, target);
 
   for (const step of [80, 40, 20, 10, 5]) {
-    for (let round = 0; round < 12; round += 1) {
+    for (let round = 0; round < 40; round += 1) {
       let improved = false;
 
       current = current.map((entry, index) => {
@@ -141,23 +141,23 @@ function coordinateOptimize(entries: OptimizerEntry[], target: MealTarget): Opti
 
 function scoreEntries(entries: OptimizerEntry[], target: MealTarget): number {
   const macro = calculateEntries(entries);
-  const calorieError = normalize(macro.calories - target.calories, Math.max(250, target.calories));
-  const proteinError = normalize(macro.proteinG - target.proteinG, Math.max(15, target.proteinG));
-  const carbsError = normalize(macro.carbsG - target.carbsG, Math.max(20, target.carbsG));
-  const fatError = normalize(macro.fatG - target.fatG, Math.max(10, target.fatG));
+  const calorieError = normalize(macro.calories - target.calories, 18);
+  const proteinError = normalize(macro.proteinG - target.proteinG, 4);
+  const carbsError = normalize(macro.carbsG - target.carbsG, 4);
+  const fatError = normalize(macro.fatG - target.fatG, 2.5);
   const gramPenalty = entries.reduce((sum, entry) => sum + Math.pow((entry.grams - initialGramsForCategory(entry.food.category)) / 200, 2), 0);
 
-  return 8 * calorieError ** 2 + 3 * proteinError ** 2 + 2 * carbsError ** 2 + 2 * fatError ** 2 + 0.15 * gramPenalty;
+  return 4 * calorieError ** 2 + 3 * proteinError ** 2 + 2.5 * carbsError ** 2 + 2.5 * fatError ** 2 + 0.02 * gramPenalty;
 }
 
 function initialGramsForFood(food: FoodWithCategory, allFoods: FoodWithCategory[], target: MealTarget): number {
   const role = getMealFoodRole(food);
   const sameRoleCount = allFoods.filter((item) => getMealFoodRole(item) === role).length || 1;
 
-  if (role === "protein") return gramsFor(food.protein, target.proteinG / sameRoleCount, 80, 280);
-  if (role === "carb") return gramsFor(food.carbs, target.carbsG / sameRoleCount, 60, 350);
-  if (role === "fat") return gramsFor(food.fat, target.fatG / sameRoleCount, food.name === "Olive oil" ? 3 : 5, food.name === "Olive oil" ? 20 : 35);
-  return 170;
+  if (role === "protein") return gramsFor(food.protein, target.proteinG / sameRoleCount, 50, 320);
+  if (role === "carb") return gramsFor(food.carbs, target.carbsG / sameRoleCount, 5, 420);
+  if (role === "fat") return gramsFor(food.fat, target.fatG / sameRoleCount, food.name === "Olive oil" ? 3 : 5, food.name === "Olive oil" ? 25 : 55);
+  return 120;
 }
 
 function initialGramsForCategory(category: FoodCategory): number {
@@ -170,13 +170,13 @@ function initialGramsForCategory(category: FoodCategory): number {
 }
 
 function boundsForFood(food: FoodWithCategory): { min: number; max: number } {
-  if (food.category === "proteins") return { min: 70, max: 300 };
-  if (food.category === "carbs") return { min: 50, max: 360 };
-  if (food.category === "vegetables") return { min: 80, max: 260 };
-  if (food.category === "fruits") return { min: 60, max: 260 };
-  if (food.category === "dairy") return { min: 100, max: 320 };
-  if (food.name === "Olive oil") return { min: 3, max: 20 };
-  return { min: 5, max: 40 };
+  if (food.category === "proteins") return { min: 40, max: 360 };
+  if (food.category === "carbs") return { min: 5, max: 420 };
+  if (food.category === "vegetables") return { min: 50, max: 300 };
+  if (food.category === "fruits") return { min: 5, max: 280 };
+  if (food.category === "dairy") return { min: 60, max: 360 };
+  if (food.name === "Olive oil") return { min: 3, max: 25 };
+  return { min: 3, max: 55 };
 }
 
 function makeOptimizedMeal(name: string, entries: OptimizerEntry[]): DietMeal {
