@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import App from "./App";
 import { DietPlanner } from "./components/DietPlanner";
 import { ProfilePage } from "./components/ProfilePage";
@@ -15,6 +15,10 @@ export default function Root() {
   const [view, setView] = useState<View>("plan");
   const language = getLanguage();
   const t = copy[language];
+
+  useEffect(() => {
+    resetScrollTop();
+  }, [view]);
 
   return (
     <>
@@ -41,6 +45,17 @@ export default function Root() {
       </nav>
     </>
   );
+}
+
+function resetScrollTop(): void {
+  if (typeof window === "undefined") return;
+
+  window.requestAnimationFrame(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    document.scrollingElement?.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    document.body.scrollTop = 0;
+    document.documentElement.scrollTop = 0;
+  });
 }
 
 function getLanguage(): "en" | "zh" {
