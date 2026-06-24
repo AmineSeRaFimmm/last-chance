@@ -131,7 +131,7 @@ const copy = {
     close: "Close",
     viewExercise: "View exercise animation",
     customPlan: "Custom Plan",
-    customPlanDescription: "创建自己的专业周训练计划",
+    customPlanDescription: "Create your own professional weekly training plan",
     categories: {
       default: "Default",
       powerlifting: "Powerlifting",
