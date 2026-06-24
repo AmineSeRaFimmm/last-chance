@@ -1,11 +1,13 @@
 import { useMemo, useState } from "react";
 import { buildSafeCarbCyclingPlan as buildCarbCyclingPlan } from "../core/carbCyclingSafePlan";
+import { getExerciseGifMatch, getExerciseGifUrl, getExerciseThumbUrl } from "../core/exerciseGifMap";
 import { buildStandardPlan } from "../core/standardPlan";
 import type { PlanResult, UserInput } from "../core/types";
 import {
   buildWorkoutPlan,
   WORKOUT_PROGRAM_OPTIONS,
   type WorkoutDay,
+  type WorkoutExercise,
   type WorkoutProgramCategory,
   type WorkoutProgramId,
   type WorkoutProgramOption
@@ -17,6 +19,14 @@ import {
 } from "../storage/weeklyStructurePreferences";
 
 type Language = "en" | "zh";
+
+interface SelectedWorkoutGif {
+  title: string;
+  prescription: string;
+  sourceName: string;
+  gifUrl: string;
+  thumbUrl: string;
+}
 
 const PROGRAM_KEY = "last_chance_workout_program";
 
@@ -98,6 +108,8 @@ const copy = {
     recovery: "Recovery",
     bestFor: "Best for",
     chooseSystem: "Choose training system",
+    close: "Close",
+    viewExercise: "View exercise animation",
     categories: {
       default: "Default",
       powerlifting: "Powerlifting",
@@ -123,6 +135,8 @@ const copy = {
     recovery: "恢复",
     bestFor: "适合",
     chooseSystem: "选择训练体系",
+    close: "关闭",
+    viewExercise: "查看动作动图",
     categories: {
       default: "默认",
       powerlifting: "力量举",
@@ -140,6 +154,7 @@ export function WorkoutPlanner() {
   const t = copy[language];
   const savedInput = loadInput();
   const [selectorOpen, setSelectorOpen] = useState(false);
+  const [selectedGif, setSelectedGif] = useState<SelectedWorkoutGif | null>(null);
   const [programId, setProgramId] = useState<WorkoutProgramId>(loadProgramId);
   const result = useMemo(() => (savedInput ? buildResult(savedInput) : null), [savedInput]);
   const plan = useMemo(
@@ -210,7 +225,7 @@ export function WorkoutPlanner() {
       </section>
 
       <div className="workout-week-stack">
-        {plan.days.map((day) => <WorkoutDayCard day={day} labels={t} language={language} key={day.day} />)}
+        {plan.days.map((day) => <WorkoutDayCard day={day} labels={t} language={language} onOpenGif={setSelectedGif} key={day.day} />)}
       </div>
 
       {selectorOpen && (
@@ -239,11 +254,13 @@ export function WorkoutPlanner() {
           </section>
         </div>
       )}
+
+      {selectedGif && <WorkoutGifOverlay gif={selectedGif} labels={t} onClose={() => setSelectedGif(null)} />}
     </main>
   );
 }
 
-function WorkoutDayCard({ day, labels, language }: { day: WorkoutDay; labels: typeof copy.en | typeof copy.zh; language: Language }) {
+function WorkoutDayCard({ day, labels, language, onOpenGif }: { day: WorkoutDay; labels: typeof copy.en | typeof copy.zh; language: Language; onOpenGif: (gif: SelectedWorkoutGif) => void }) {
   return (
     <section className="card workout-day-card">
       <div className="workout-day-head">
@@ -261,11 +278,7 @@ function WorkoutDayCard({ day, labels, language }: { day: WorkoutDay; labels: ty
 
       <div className="exercise-stack">
         {day.exercises.map((exercise) => (
-          <div className="exercise-row" key={`${day.day}-${exercise.name}`}>
-            <strong>{exercise.name}</strong>
-            <span>{exercise.prescription}</span>
-            {exercise.note && <em>{tr(exercise.note, language)}</em>}
-          </div>
+          <WorkoutExerciseRow exercise={exercise} labels={labels} language={language} onOpenGif={onOpenGif} key={`${day.day}-${exercise.name}`} />
         ))}
       </div>
 
@@ -276,6 +289,58 @@ function WorkoutDayCard({ day, labels, language }: { day: WorkoutDay; labels: ty
         </div>
       )}
     </section>
+  );
+}
+
+function WorkoutExerciseRow({ exercise, labels, language, onOpenGif }: { exercise: WorkoutExercise; labels: typeof copy.en | typeof copy.zh; language: Language; onOpenGif: (gif: SelectedWorkoutGif) => void }) {
+  const match = getExerciseGifMatch(exercise.name);
+  const asset = match.asset;
+  const gifUrl = asset ? getExerciseGifUrl(asset) : undefined;
+  const thumbUrl = asset ? getExerciseThumbUrl(asset) : undefined;
+
+  return (
+    <div className={`exercise-row ${gifUrl && thumbUrl ? "has-gif" : ""}`}>
+      <div className="exercise-copy">
+        <strong>{exercise.name}</strong>
+        <span className="exercise-prescription">{exercise.prescription}</span>
+        {exercise.note && <em>{tr(exercise.note, language)}</em>}
+      </div>
+      {gifUrl && thumbUrl && asset && (
+        <button
+          className="exercise-gif-button"
+          type="button"
+          aria-label={`${labels.viewExercise}: ${exercise.name}`}
+          onClick={() => onOpenGif({ title: exercise.name, prescription: exercise.prescription, sourceName: asset.sourceName, gifUrl, thumbUrl })}
+        >
+          <img
+            src={gifUrl}
+            alt=""
+            loading="lazy"
+            onError={(event) => {
+              event.currentTarget.parentElement?.classList.add("is-hidden");
+            }}
+          />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function WorkoutGifOverlay({ gif, labels, onClose }: { gif: SelectedWorkoutGif; labels: typeof copy.en | typeof copy.zh; onClose: () => void }) {
+  return (
+    <div className="workout-gif-overlay" role="dialog" aria-modal="true" aria-label={gif.title}>
+      <button className="workout-gif-backdrop" type="button" aria-label={labels.close} onClick={onClose} />
+      <section className="workout-gif-modal">
+        <button className="workout-gif-close" type="button" onClick={onClose}>{labels.close}</button>
+        <div className="workout-gif-frame">
+          <img src={gif.gifUrl} alt={gif.sourceName} />
+        </div>
+        <div className="workout-gif-caption">
+          <strong>{gif.title}</strong>
+          <span>{gif.prescription}</span>
+        </div>
+      </section>
+    </div>
   );
 }
 
