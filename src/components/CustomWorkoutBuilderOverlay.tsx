@@ -47,10 +47,16 @@ interface SelectedBuilderGif {
   sourceName: string;
 }
 
+interface LastPillTap {
+  dayIndex: number;
+  exerciseIndex: number;
+  time: number;
+}
+
 const copy = {
   en: {
     title: "Custom Plan",
-    subtitle: "Build a weekly plan from ExerciseGymGifsDB movements.",
+    subtitle: "创建自己的专业周训练计划",
     done: "Done",
     search: "Search exercises",
     sets: "sets",
@@ -64,7 +70,7 @@ const copy = {
   },
   zh: {
     title: "自定义计划",
-    subtitle: "从 ExerciseGymGifsDB 动作库创建一周训练。",
+    subtitle: "创建自己的专业周训练计划",
     done: "完成",
     search: "搜索训练动作",
     sets: "组",
@@ -82,13 +88,14 @@ const setOptions = [1, 2, 3, 4, 5, 6];
 const repOptions = ["5", "6–8", "8–10", "10–12", "12–15", "15–20", "AMRAP"];
 const durationOptions = [10, 15, 20, 30, 45, 60];
 const firstMuscle = CUSTOM_WORKOUT_MUSCLE_TABS[0].muscle;
+const doubleTapDelayMs = 320;
 
 export function CustomWorkoutBuilderOverlay({ initialPlan, language, onBack, onSave }: CustomWorkoutBuilderOverlayProps) {
   const t = copy[language];
   const activeDayCardRef = useRef<HTMLButtonElement | null>(null);
   const activeDragRef = useRef<ActiveDrag | null>(null);
   const activeReorderRef = useRef<ActiveReorder | null>(null);
-  const suppressPillClickRef = useRef(false);
+  const lastPillTapRef = useRef<LastPillTap | null>(null);
   const [draft, setDraft] = useState<CustomWorkoutPlanData>(() => initialPlan ?? createEmptyCustomWorkoutPlan());
   const [activeDayIndex, setActiveDayIndex] = useState<number | null>(null);
   const [activeMuscle, setActiveMuscle] = useState(firstMuscle);
@@ -202,11 +209,7 @@ export function CustomWorkoutBuilderOverlay({ initialPlan, language, onBack, onS
         if (Number.isInteger(toIndex)) reorderExerciseInDay(current.dayIndex, current.fromIndex, toIndex);
       }
 
-      suppressPillClickRef.current = Boolean(current?.moved);
       setActiveReorder(null);
-      window.setTimeout(() => {
-        suppressPillClickRef.current = false;
-      }, 0);
     }
 
     function handlePointerCancel() {
@@ -287,8 +290,21 @@ export function CustomWorkoutBuilderOverlay({ initialPlan, language, onBack, onS
 
   function startReorder(event: ReactPointerEvent<HTMLSpanElement>, dayIndex: number, fromIndex: number, label: string) {
     if (activeDayIndex === null) return;
+    const now = window.performance.now();
+    const lastTap = lastPillTapRef.current;
+    const isDoubleTap = Boolean(lastTap && lastTap.dayIndex === dayIndex && lastTap.exerciseIndex === fromIndex && now - lastTap.time <= doubleTapDelayMs);
+
     event.preventDefault();
     event.stopPropagation();
+
+    if (isDoubleTap) {
+      lastPillTapRef.current = null;
+      setActiveReorder(null);
+      removeExerciseFromDay(dayIndex, fromIndex);
+      return;
+    }
+
+    lastPillTapRef.current = { dayIndex, exerciseIndex: fromIndex, time: now };
     setActiveDrag(null);
     setActiveReorder({ dayIndex, fromIndex, label, x: event.clientX, y: event.clientY, startX: event.clientX, startY: event.clientY, moved: false });
   }
@@ -343,11 +359,6 @@ export function CustomWorkoutBuilderOverlay({ initialPlan, language, onBack, onS
                       className={activeDayIndex !== null ? "removable sortable" : ""}
                       data-custom-exercise-index={exerciseIndex}
                       key={`${day.day}-${exercise.name}-${exerciseIndex}`}
-                      onClick={activeDayIndex !== null ? (event) => {
-                        event.stopPropagation();
-                        if (suppressPillClickRef.current) return;
-                        removeExerciseFromDay(dayIndex, exerciseIndex);
-                      } : undefined}
                       onPointerDown={activeDayIndex !== null ? (event) => startReorder(event, dayIndex, exerciseIndex, exercise.name) : undefined}
                     >
                       {activeDayIndex !== null && <b>{exerciseIndex + 1}</b>}
