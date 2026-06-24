@@ -30,6 +30,17 @@ interface ActiveDrag {
   moved: boolean;
 }
 
+interface ActiveReorder {
+  dayIndex: number;
+  fromIndex: number;
+  label: string;
+  x: number;
+  y: number;
+  startX: number;
+  startY: number;
+  moved: boolean;
+}
+
 interface SelectedBuilderGif {
   title: string;
   gifUrl: string;
@@ -44,6 +55,7 @@ const copy = {
     search: "Search exercises",
     sets: "sets",
     reps: "reps",
+    duration: "duration",
     loading: "Loading exercises...",
     empty: "No exercises found",
     back: "Back",
@@ -57,6 +69,7 @@ const copy = {
     search: "搜索训练动作",
     sets: "组",
     reps: "次",
+    duration: "时长",
     loading: "正在加载动作...",
     empty: "没有找到动作",
     back: "返回",
@@ -67,24 +80,29 @@ const copy = {
 
 const setOptions = [1, 2, 3, 4, 5, 6];
 const repOptions = ["5", "6–8", "8–10", "10–12", "12–15", "15–20", "AMRAP"];
+const durationOptions = [10, 15, 20, 30, 45, 60];
 const firstMuscle = CUSTOM_WORKOUT_MUSCLE_TABS[0].muscle;
 
 export function CustomWorkoutBuilderOverlay({ initialPlan, language, onBack, onSave }: CustomWorkoutBuilderOverlayProps) {
   const t = copy[language];
   const activeDayCardRef = useRef<HTMLButtonElement | null>(null);
   const activeDragRef = useRef<ActiveDrag | null>(null);
+  const activeReorderRef = useRef<ActiveReorder | null>(null);
+  const suppressPillClickRef = useRef(false);
   const [draft, setDraft] = useState<CustomWorkoutPlanData>(() => initialPlan ?? createEmptyCustomWorkoutPlan());
   const [activeDayIndex, setActiveDayIndex] = useState<number | null>(null);
   const [activeMuscle, setActiveMuscle] = useState(firstMuscle);
   const [query, setQuery] = useState("");
   const [sets, setSets] = useState(3);
   const [reps, setReps] = useState("8–10");
+  const [duration, setDuration] = useState(20);
   const [catalog, setCatalog] = useState<Record<string, CustomCatalogExercise[]>>(() => {
     const cached = getCachedCustomExercisesByMuscle(firstMuscle);
     return cached ? { [firstMuscle]: cached } : {};
   });
   const [loadingMuscle, setLoadingMuscle] = useState<string | null>(null);
   const [activeDrag, setActiveDrag] = useState<ActiveDrag | null>(null);
+  const [activeReorder, setActiveReorder] = useState<ActiveReorder | null>(null);
   const [selectedGif, setSelectedGif] = useState<SelectedBuilderGif | null>(null);
 
   const activeDay = activeDayIndex === null ? null : draft.days[activeDayIndex];
@@ -92,6 +110,10 @@ export function CustomWorkoutBuilderOverlay({ initialPlan, language, onBack, onS
   useEffect(() => {
     activeDragRef.current = activeDrag;
   }, [activeDrag]);
+
+  useEffect(() => {
+    activeReorderRef.current = activeReorder;
+  }, [activeReorder]);
 
   useEffect(() => {
     if (catalog[activeMuscle]) return;
@@ -157,7 +179,50 @@ export function CustomWorkoutBuilderOverlay({ initialPlan, language, onBack, onS
       window.removeEventListener("pointerup", handlePointerUp);
       window.removeEventListener("pointercancel", handlePointerCancel);
     };
-  }, [Boolean(activeDrag), activeDayIndex, sets, reps]);
+  }, [Boolean(activeDrag), activeDayIndex, sets, reps, duration]);
+
+  useEffect(() => {
+    if (!activeReorder) return;
+
+    function handlePointerMove(event: PointerEvent) {
+      event.preventDefault();
+      setActiveReorder((current) => {
+        if (!current) return null;
+        const moved = current.moved || Math.hypot(event.clientX - current.startX, event.clientY - current.startY) > 5;
+        return { ...current, x: event.clientX, y: event.clientY, moved };
+      });
+    }
+
+    function handlePointerUp(event: PointerEvent) {
+      event.preventDefault();
+      const current = activeReorderRef.current;
+      if (current?.moved) {
+        const target = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-custom-exercise-index]") as HTMLElement | null;
+        const toIndex = target ? Number(target.dataset.customExerciseIndex) : current.fromIndex;
+        if (Number.isInteger(toIndex)) reorderExerciseInDay(current.dayIndex, current.fromIndex, toIndex);
+      }
+
+      suppressPillClickRef.current = Boolean(current?.moved);
+      setActiveReorder(null);
+      window.setTimeout(() => {
+        suppressPillClickRef.current = false;
+      }, 0);
+    }
+
+    function handlePointerCancel() {
+      setActiveReorder(null);
+    }
+
+    window.addEventListener("pointermove", handlePointerMove, { passive: false });
+    window.addEventListener("pointerup", handlePointerUp, { passive: false });
+    window.addEventListener("pointercancel", handlePointerCancel);
+
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerCancel);
+    };
+  }, [Boolean(activeReorder)]);
 
   const exercises = useMemo(() => {
     const items = catalog[activeMuscle] ?? [];
@@ -171,9 +236,11 @@ export function CustomWorkoutBuilderOverlay({ initialPlan, language, onBack, onS
   }, [exercises]);
 
   function addExerciseToDay(dayIndex: number, exercise: CustomCatalogExercise) {
+    const exerciseKey = getCatalogExerciseKey(exercise);
     const nextExercise: CustomWorkoutExercise = {
+      sourceId: exercise.id,
       name: exercise.name,
-      prescription: `${sets} × ${reps}`,
+      prescription: isCardioExercise(exercise) ? `${duration} min` : `${sets} × ${reps}`,
       gifUrl: exercise.gifUrl,
       thumbUrl: exercise.thumbUrl,
       sourceName: exercise.name,
@@ -182,7 +249,11 @@ export function CustomWorkoutBuilderOverlay({ initialPlan, language, onBack, onS
 
     setDraft((current) => ({
       ...current,
-      days: current.days.map((day, index) => index === dayIndex ? { ...day, exercises: [...day.exercises, nextExercise] } : day)
+      days: current.days.map((day, index) => {
+        if (index !== dayIndex) return day;
+        if (day.exercises.some((item) => getStoredExerciseKey(item) === exerciseKey)) return day;
+        return { ...day, exercises: [...day.exercises, nextExercise] };
+      })
     }));
   }
 
@@ -194,9 +265,32 @@ export function CustomWorkoutBuilderOverlay({ initialPlan, language, onBack, onS
     }));
   }
 
+  function reorderExerciseInDay(dayIndex: number, fromIndex: number, toIndex: number) {
+    if (fromIndex === toIndex) return;
+    setDraft((current) => ({
+      ...current,
+      days: current.days.map((day, index) => {
+        if (index !== dayIndex) return day;
+        const nextExercises = [...day.exercises];
+        const [moved] = nextExercises.splice(fromIndex, 1);
+        if (!moved) return day;
+        nextExercises.splice(Math.max(0, Math.min(toIndex, nextExercises.length)), 0, moved);
+        return { ...day, exercises: nextExercises };
+      })
+    }));
+  }
+
   function startDrag(event: ReactPointerEvent<HTMLDivElement>, exercise: CustomCatalogExercise) {
     event.preventDefault();
     setActiveDrag({ exercise, x: event.clientX, y: event.clientY, startX: event.clientX, startY: event.clientY, moved: false });
+  }
+
+  function startReorder(event: ReactPointerEvent<HTMLSpanElement>, dayIndex: number, fromIndex: number, label: string) {
+    if (activeDayIndex === null) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setActiveDrag(null);
+    setActiveReorder({ dayIndex, fromIndex, label, x: event.clientX, y: event.clientY, startX: event.clientX, startY: event.clientY, moved: false });
   }
 
   function openGif(exercise: CustomCatalogExercise) {
@@ -208,6 +302,7 @@ export function CustomWorkoutBuilderOverlay({ initialPlan, language, onBack, onS
     if (activeDayIndex !== null) {
       setActiveDayIndex(null);
       setActiveDrag(null);
+      setActiveReorder(null);
       setSelectedGif(null);
       return;
     }
@@ -245,10 +340,17 @@ export function CustomWorkoutBuilderOverlay({ initialPlan, language, onBack, onS
                 <div className="custom-builder-day-pills">
                   {day.exercises.map((exercise, exerciseIndex) => (
                     <span
-                      className={activeDayIndex !== null ? "removable" : ""}
+                      className={activeDayIndex !== null ? "removable sortable" : ""}
+                      data-custom-exercise-index={exerciseIndex}
                       key={`${day.day}-${exercise.name}-${exerciseIndex}`}
-                      onClick={activeDayIndex !== null ? (event) => { event.stopPropagation(); removeExerciseFromDay(dayIndex, exerciseIndex); } : undefined}
+                      onClick={activeDayIndex !== null ? (event) => {
+                        event.stopPropagation();
+                        if (suppressPillClickRef.current) return;
+                        removeExerciseFromDay(dayIndex, exerciseIndex);
+                      } : undefined}
+                      onPointerDown={activeDayIndex !== null ? (event) => startReorder(event, dayIndex, exerciseIndex, exercise.name) : undefined}
                     >
+                      {activeDayIndex !== null && <b>{exerciseIndex + 1}</b>}
                       {exercise.name}
                     </span>
                   ))}
@@ -272,23 +374,35 @@ export function CustomWorkoutBuilderOverlay({ initialPlan, language, onBack, onS
               {loadingMuscle !== activeMuscle && exercises.length === 0 && <div className="custom-builder-empty">{t.empty}</div>}
               {loadingMuscle !== activeMuscle && exercises.slice(0, 80).map((exercise) => {
                 const previewUrl = exercise.thumbUrl ?? exercise.gifUrl;
+                const cardio = isCardioExercise(exercise);
                 return (
                   <div className="custom-exercise-result exercise-row has-gif" key={exercise.id}>
                     <div className="exercise-copy custom-exercise-drag-zone" onDoubleClick={() => addExerciseToDay(activeDayIndex, exercise)} onPointerDown={(event) => startDrag(event, exercise)}>
                       <strong>{exercise.name}</strong>
                       <div className="custom-prescription-capsules" onPointerDown={(event) => event.stopPropagation()}>
-                        <label>
-                          <span>{t.sets}</span>
-                          <select onChange={(event) => setSets(Number(event.target.value))} value={sets}>
-                            {setOptions.map((option) => <option key={option} value={option}>{option}</option>)}
-                          </select>
-                        </label>
-                        <label>
-                          <span>{t.reps}</span>
-                          <select onChange={(event) => setReps(event.target.value)} value={reps}>
-                            {repOptions.map((option) => <option key={option} value={option}>{option}</option>)}
-                          </select>
-                        </label>
+                        {cardio ? (
+                          <label>
+                            <span>{t.duration}</span>
+                            <select onChange={(event) => setDuration(Number(event.target.value))} value={duration}>
+                              {durationOptions.map((option) => <option key={option} value={option}>{option} min</option>)}
+                            </select>
+                          </label>
+                        ) : (
+                          <>
+                            <label>
+                              <span>{t.sets}</span>
+                              <select onChange={(event) => setSets(Number(event.target.value))} value={sets}>
+                                {setOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                              </select>
+                            </label>
+                            <label>
+                              <span>{t.reps}</span>
+                              <select onChange={(event) => setReps(event.target.value)} value={reps}>
+                                {repOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                              </select>
+                            </label>
+                          </>
+                        )}
                       </div>
                     </div>
                     <button
@@ -309,6 +423,7 @@ export function CustomWorkoutBuilderOverlay({ initialPlan, language, onBack, onS
       </section>
 
       {activeDrag && activeDrag.moved && <div className="custom-exercise-floating" style={{ transform: `translate3d(${activeDrag.x}px, ${activeDrag.y}px, 0)` }}>{activeDrag.exercise.name}</div>}
+      {activeReorder && activeReorder.moved && <div className="custom-exercise-floating" style={{ transform: `translate3d(${activeReorder.x}px, ${activeReorder.y}px, 0)` }}>{activeReorder.label}</div>}
       {selectedGif && <CustomBuilderGifOverlay gif={selectedGif} labels={t} onClose={() => setSelectedGif(null)} />}
     </div>
   );
@@ -332,6 +447,18 @@ function CustomBuilderGifOverlay({ gif, labels, onClose }: { gif: SelectedBuilde
       </section>
     </div>
   );
+}
+
+function getCatalogExerciseKey(exercise: CustomCatalogExercise): string {
+  return exercise.id || `${exercise.muscle}:${exercise.name}`;
+}
+
+function getStoredExerciseKey(exercise: CustomWorkoutExercise): string {
+  return exercise.sourceId || `${exercise.muscle}:${exercise.sourceName || exercise.name}`;
+}
+
+function isCardioExercise(exercise: CustomCatalogExercise): boolean {
+  return exercise.muscle === "cardio" || exercise.category === "cardio";
 }
 
 function isInsideElement(x: number, y: number, element: HTMLElement | null): boolean {
