@@ -82,6 +82,46 @@ const orbit: CardPosition[] = [
   { left: "78%", top: "86%", rotate: "5deg" }
 ];
 
+const orbitPages: CardPosition[][] = [
+  orbit,
+  [
+    { left: "7%", top: "6%", rotate: "3deg" },
+    { left: "76%", top: "7%", rotate: "-5deg" },
+    { left: "2%", top: "20%", rotate: "-4deg" },
+    { left: "66%", top: "21%", rotate: "6deg" },
+    { left: "25%", top: "4%", rotate: "-2deg" },
+    { left: "54%", top: "16%", rotate: "4deg" },
+    { left: "13%", top: "38%", rotate: "5deg" },
+    { left: "73%", top: "34%", rotate: "-3deg" },
+    { left: "1%", top: "50%", rotate: "-6deg" },
+    { left: "80%", top: "54%", rotate: "2deg" },
+    { left: "18%", top: "68%", rotate: "-2deg" },
+    { left: "58%", top: "71%", rotate: "5deg" },
+    { left: "38%", top: "78%", rotate: "3deg" },
+    { left: "49%", top: "88%", rotate: "-5deg" },
+    { left: "5%", top: "88%", rotate: "4deg" },
+    { left: "72%", top: "83%", rotate: "-4deg" }
+  ],
+  [
+    { left: "30%", top: "3%", rotate: "-4deg" },
+    { left: "55%", top: "4%", rotate: "5deg" },
+    { left: "4%", top: "10%", rotate: "2deg" },
+    { left: "78%", top: "13%", rotate: "-3deg" },
+    { left: "14%", top: "25%", rotate: "-6deg" },
+    { left: "67%", top: "26%", rotate: "4deg" },
+    { left: "2%", top: "42%", rotate: "5deg" },
+    { left: "82%", top: "43%", rotate: "-5deg" },
+    { left: "21%", top: "56%", rotate: "3deg" },
+    { left: "59%", top: "57%", rotate: "-2deg" },
+    { left: "8%", top: "71%", rotate: "-4deg" },
+    { left: "76%", top: "72%", rotate: "6deg" },
+    { left: "33%", top: "86%", rotate: "4deg" },
+    { left: "54%", top: "82%", rotate: "-6deg" },
+    { left: "2%", top: "86%", rotate: "2deg" },
+    { left: "80%", top: "88%", rotate: "-3deg" }
+  ]
+];
+
 export function MealComposerOverlay({
   language,
   dayLabel,
@@ -206,12 +246,12 @@ export function MealComposerOverlay({
     }));
   }
 
-  function getCardPosition(foodName: string, fallbackIndex: number): CardPosition {
+  function getCardPosition(foodName: string, fallbackIndex: number, page: number): CardPosition {
     const movedPosition = externalPositions[foodName];
     if (movedPosition) return movedPosition;
 
     const assignedSlot = orbitSlotRef.current[foodName];
-    if (assignedSlot !== undefined) return orbit[assignedSlot];
+    if (assignedSlot !== undefined) return getOrbitPosition(assignedSlot, page);
 
     const usedSlots = new Set(Object.values(orbitSlotRef.current));
     let slot = fallbackIndex % orbit.length;
@@ -225,7 +265,7 @@ export function MealComposerOverlay({
     }
 
     orbitSlotRef.current[foodName] = slot;
-    return orbit[slot];
+    return getOrbitPosition(slot, page);
   }
 
   function startDrag(event: ReactPointerEvent<HTMLElement>, source: DragSource, food: FoodWithCategory) {
@@ -250,7 +290,7 @@ export function MealComposerOverlay({
 
       <div className="ingredient-orbit" aria-label={t.outside} ref={ingredientOrbitRef}>
         {visibleOptions.map((food, index) => {
-          const position = getCardPosition(food.name, index);
+          const position = getCardPosition(food.name, index, foodPage);
           return (
             <button
               className={`ingredient-chip ${getMealFoodRole(food)}`}
@@ -309,6 +349,11 @@ function prioritizeFoods(foods: FoodWithCategory[], meal: DietMeal): FoodWithCat
     const secondPreferred = currentRoles.has(getMealFoodRole(second)) ? 0 : 1;
     return firstPreferred - secondPreferred || first.name.localeCompare(second.name);
   });
+}
+
+function getOrbitPosition(slot: number, page: number): CardPosition {
+  const pageOrbit = orbitPages[page % orbitPages.length] ?? orbit;
+  return pageOrbit[slot % pageOrbit.length] ?? orbit[slot % orbit.length];
 }
 
 function categoryLabel(category: FoodCategory, labels: typeof copy.en | typeof copy.zh): string {
