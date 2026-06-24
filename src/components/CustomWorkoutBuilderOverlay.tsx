@@ -2,8 +2,10 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointer
 import {
   CUSTOM_WORKOUT_MUSCLE_TABS,
   fetchCustomExercisesByMuscle,
+  getCachedCustomExercisesByMuscle,
   type CustomCatalogExercise
 } from "../core/customWorkoutCatalog";
+import { markImageCached, preloadImage, warmImageCache } from "../core/imageCache";
 import {
   createEmptyCustomWorkoutPlan,
   type CustomWorkoutExercise,
@@ -65,6 +67,7 @@ const copy = {
 
 const setOptions = [1, 2, 3, 4, 5, 6];
 const repOptions = ["5", "6–8", "8–10", "10–12", "12–15", "15–20", "AMRAP"];
+const firstMuscle = CUSTOM_WORKOUT_MUSCLE_TABS[0].muscle;
 
 export function CustomWorkoutBuilderOverlay({ initialPlan, language, onBack, onSave }: CustomWorkoutBuilderOverlayProps) {
   const t = copy[language];
@@ -72,11 +75,14 @@ export function CustomWorkoutBuilderOverlay({ initialPlan, language, onBack, onS
   const activeDragRef = useRef<ActiveDrag | null>(null);
   const [draft, setDraft] = useState<CustomWorkoutPlanData>(() => initialPlan ?? createEmptyCustomWorkoutPlan());
   const [activeDayIndex, setActiveDayIndex] = useState<number | null>(null);
-  const [activeMuscle, setActiveMuscle] = useState(CUSTOM_WORKOUT_MUSCLE_TABS[0].muscle);
+  const [activeMuscle, setActiveMuscle] = useState(firstMuscle);
   const [query, setQuery] = useState("");
   const [sets, setSets] = useState(3);
   const [reps, setReps] = useState("8–10");
-  const [catalog, setCatalog] = useState<Record<string, CustomCatalogExercise[]>>({});
+  const [catalog, setCatalog] = useState<Record<string, CustomCatalogExercise[]>>(() => {
+    const cached = getCachedCustomExercisesByMuscle(firstMuscle);
+    return cached ? { [firstMuscle]: cached } : {};
+  });
   const [loadingMuscle, setLoadingMuscle] = useState<string | null>(null);
   const [activeDrag, setActiveDrag] = useState<ActiveDrag | null>(null);
   const [selectedGif, setSelectedGif] = useState<SelectedBuilderGif | null>(null);
@@ -89,6 +95,14 @@ export function CustomWorkoutBuilderOverlay({ initialPlan, language, onBack, onS
 
   useEffect(() => {
     if (catalog[activeMuscle]) return;
+
+    const cached = getCachedCustomExercisesByMuscle(activeMuscle);
+    if (cached) {
+      setCatalog((current) => ({ ...current, [activeMuscle]: cached }));
+      setLoadingMuscle(null);
+      return;
+    }
+
     let cancelled = false;
     setLoadingMuscle(activeMuscle);
     fetchCustomExercisesByMuscle(activeMuscle)
@@ -152,6 +166,10 @@ export function CustomWorkoutBuilderOverlay({ initialPlan, language, onBack, onS
     return items.filter((exercise) => exercise.name.toLowerCase().includes(search));
   }, [activeMuscle, catalog, query]);
 
+  useEffect(() => {
+    warmImageCache(exercises.map((exercise) => exercise.thumbUrl ?? exercise.gifUrl), 24);
+  }, [exercises]);
+
   function addExerciseToDay(dayIndex: number, exercise: CustomCatalogExercise) {
     const nextExercise: CustomWorkoutExercise = {
       name: exercise.name,
@@ -179,6 +197,11 @@ export function CustomWorkoutBuilderOverlay({ initialPlan, language, onBack, onS
   function startDrag(event: ReactPointerEvent<HTMLDivElement>, exercise: CustomCatalogExercise) {
     event.preventDefault();
     setActiveDrag({ exercise, x: event.clientX, y: event.clientY, startX: event.clientX, startY: event.clientY, moved: false });
+  }
+
+  function openGif(exercise: CustomCatalogExercise) {
+    void preloadImage(exercise.gifUrl);
+    setSelectedGif({ title: exercise.name, gifUrl: exercise.gifUrl, sourceName: exercise.name });
   }
 
   function handleBack() {
@@ -247,35 +270,39 @@ export function CustomWorkoutBuilderOverlay({ initialPlan, language, onBack, onS
             <div className="custom-builder-exercise-list">
               {loadingMuscle === activeMuscle && <div className="custom-builder-empty">{t.loading}</div>}
               {loadingMuscle !== activeMuscle && exercises.length === 0 && <div className="custom-builder-empty">{t.empty}</div>}
-              {loadingMuscle !== activeMuscle && exercises.slice(0, 80).map((exercise) => (
-                <div className="custom-exercise-result exercise-row has-gif" key={exercise.id}>
-                  <div className="exercise-copy custom-exercise-drag-zone" onDoubleClick={() => addExerciseToDay(activeDayIndex, exercise)} onPointerDown={(event) => startDrag(event, exercise)}>
-                    <strong>{exercise.name}</strong>
-                    <div className="custom-prescription-capsules" onPointerDown={(event) => event.stopPropagation()}>
-                      <label>
-                        <span>{t.sets}</span>
-                        <select onChange={(event) => setSets(Number(event.target.value))} value={sets}>
-                          {setOptions.map((option) => <option key={option} value={option}>{option}</option>)}
-                        </select>
-                      </label>
-                      <label>
-                        <span>{t.reps}</span>
-                        <select onChange={(event) => setReps(event.target.value)} value={reps}>
-                          {repOptions.map((option) => <option key={option} value={option}>{option}</option>)}
-                        </select>
-                      </label>
+              {loadingMuscle !== activeMuscle && exercises.slice(0, 80).map((exercise) => {
+                const previewUrl = exercise.thumbUrl ?? exercise.gifUrl;
+                return (
+                  <div className="custom-exercise-result exercise-row has-gif" key={exercise.id}>
+                    <div className="exercise-copy custom-exercise-drag-zone" onDoubleClick={() => addExerciseToDay(activeDayIndex, exercise)} onPointerDown={(event) => startDrag(event, exercise)}>
+                      <strong>{exercise.name}</strong>
+                      <div className="custom-prescription-capsules" onPointerDown={(event) => event.stopPropagation()}>
+                        <label>
+                          <span>{t.sets}</span>
+                          <select onChange={(event) => setSets(Number(event.target.value))} value={sets}>
+                            {setOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                          </select>
+                        </label>
+                        <label>
+                          <span>{t.reps}</span>
+                          <select onChange={(event) => setReps(event.target.value)} value={reps}>
+                            {repOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                          </select>
+                        </label>
+                      </div>
                     </div>
+                    <button
+                      aria-label={`${t.viewExercise}: ${exercise.name}`}
+                      className="exercise-gif-button custom-exercise-gif"
+                      onClick={() => openGif(exercise)}
+                      onMouseEnter={() => void preloadImage(exercise.gifUrl)}
+                      type="button"
+                    >
+                      <img alt="" loading="lazy" onLoad={() => markImageCached(previewUrl)} src={previewUrl} />
+                    </button>
                   </div>
-                  <button
-                    aria-label={`${t.viewExercise}: ${exercise.name}`}
-                    className="exercise-gif-button custom-exercise-gif"
-                    onClick={() => setSelectedGif({ title: exercise.name, gifUrl: exercise.gifUrl, sourceName: exercise.name })}
-                    type="button"
-                  >
-                    <img alt="" loading="lazy" src={exercise.thumbUrl ?? exercise.gifUrl} />
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -288,12 +315,16 @@ export function CustomWorkoutBuilderOverlay({ initialPlan, language, onBack, onS
 }
 
 function CustomBuilderGifOverlay({ gif, labels, onClose }: { gif: SelectedBuilderGif; labels: typeof copy.en | typeof copy.zh; onClose: () => void }) {
+  useEffect(() => {
+    void preloadImage(gif.gifUrl);
+  }, [gif.gifUrl]);
+
   return (
     <div className="custom-builder-gif-overlay" role="dialog" aria-modal="true" aria-label={gif.title}>
       <button className="custom-builder-gif-backdrop" type="button" aria-label={labels.close} onClick={onClose} />
       <section className="custom-builder-gif-modal">
         <div className="workout-gif-frame">
-          <img src={gif.gifUrl} alt={gif.sourceName} />
+          <img src={gif.gifUrl} alt={gif.sourceName} onLoad={() => markImageCached(gif.gifUrl)} />
         </div>
         <div className="workout-gif-caption">
           <strong>{gif.title}</strong>
