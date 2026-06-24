@@ -331,7 +331,6 @@ function WorkoutGifOverlay({ gif, labels, onClose }: { gif: SelectedWorkoutGif; 
     <div className="workout-gif-overlay" role="dialog" aria-modal="true" aria-label={gif.title}>
       <button className="workout-gif-backdrop" type="button" aria-label={labels.close} onClick={onClose} />
       <section className="workout-gif-modal">
-        <button className="workout-gif-close" type="button" onClick={onClose}>{labels.close}</button>
         <div className="workout-gif-frame">
           <img src={gif.gifUrl} alt={gif.sourceName} />
         </div>
