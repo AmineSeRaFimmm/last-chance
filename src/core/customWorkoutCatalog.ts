@@ -17,6 +17,8 @@ export interface CustomWorkoutMuscleTab {
 }
 
 const EXERCISE_DB_BASE_URL = "https://cdn.jsdelivr.net/gh/JahelCuadrado/ExerciseGymGifsDB@main";
+const exerciseCache = new Map<string, CustomCatalogExercise[]>();
+const pendingRequests = new Map<string, Promise<CustomCatalogExercise[]>>();
 
 export const CUSTOM_WORKOUT_MUSCLE_TABS: CustomWorkoutMuscleTab[] = [
   { muscle: "pectorals", label: "Chest" },
@@ -39,10 +41,33 @@ export const CUSTOM_WORKOUT_MUSCLE_TABS: CustomWorkoutMuscleTab[] = [
   { muscle: "cardio", label: "Cardio" }
 ];
 
-export async function fetchCustomExercisesByMuscle(muscle: string): Promise<CustomCatalogExercise[]> {
-  const response = await fetch(`${EXERCISE_DB_BASE_URL}/api/en/muscles/${muscle}.json`);
-  if (!response.ok) throw new Error(`Failed to load ${muscle} exercises`);
+export function getCachedCustomExercisesByMuscle(muscle: string): CustomCatalogExercise[] | null {
+  return exerciseCache.get(muscle) ?? null;
+}
 
-  const data = await response.json() as { exercises?: CustomCatalogExercise[] };
-  return Array.isArray(data.exercises) ? data.exercises : [];
+export async function fetchCustomExercisesByMuscle(muscle: string): Promise<CustomCatalogExercise[]> {
+  const cached = exerciseCache.get(muscle);
+  if (cached) return cached;
+
+  const pending = pendingRequests.get(muscle);
+  if (pending) return pending;
+
+  const request = fetch(`${EXERCISE_DB_BASE_URL}/api/en/muscles/${muscle}.json`)
+    .then(async (response) => {
+      if (!response.ok) throw new Error(`Failed to load ${muscle} exercises`);
+      const data = await response.json() as { exercises?: CustomCatalogExercise[] };
+      const exercises = Array.isArray(data.exercises) ? data.exercises : [];
+      exerciseCache.set(muscle, exercises);
+      return exercises;
+    })
+    .catch((error) => {
+      exerciseCache.set(muscle, []);
+      throw error;
+    })
+    .finally(() => {
+      pendingRequests.delete(muscle);
+    });
+
+  pendingRequests.set(muscle, request);
+  return request;
 }
