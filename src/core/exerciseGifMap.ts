@@ -1,3 +1,5 @@
+export const EXERCISE_GIF_DB_BASE_URL = "https://cdn.jsdelivr.net/gh/JahelCuadrado/ExerciseGymGifsDB@main";
+
 export type ExerciseGifMatchStatus = "exact" | "fallback" | "none";
 
 export interface ExerciseGifAsset {
@@ -193,6 +195,14 @@ export function getExerciseGifMatch(exerciseName: string): ExerciseGifMatch {
   if (patternMatch) return buildMatch(patternMatch.status, exerciseName, normalizedName, patternMatch.assetKey, patternMatch.reason);
 
   return { status: "none", originalName: exerciseName, normalizedName, reason: "No verified ExerciseGymGifsDB match for this workout row." };
+}
+
+export function getExerciseGifUrl(asset: ExerciseGifAsset): string {
+  return `${EXERCISE_GIF_DB_BASE_URL}/${asset.file}`;
+}
+
+export function getExerciseThumbUrl(asset: ExerciseGifAsset): string {
+  return `${EXERCISE_GIF_DB_BASE_URL}/${asset.file.replace(/\.gif$/, ".thumb.webp")}`;
 }
 
 export function normalizeExerciseName(exerciseName: string): string {
