@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { CustomWorkoutBuilderOverlay } from "./CustomWorkoutBuilderOverlay";
 import { buildSafeCarbCyclingPlan as buildCarbCyclingPlan } from "../core/carbCyclingSafePlan";
 import { getExerciseGifMatch, getExerciseGifUrl, getExerciseThumbUrl } from "../core/exerciseGifMap";
 import { buildStandardPlan } from "../core/standardPlan";
@@ -13,6 +14,13 @@ import {
   type WorkoutProgramOption
 } from "../core/workoutPlan";
 import { loadInput } from "../storage/localPlan";
+import {
+  clearCustomWorkoutPlan,
+  customWorkoutToWorkoutPlan,
+  loadCustomWorkoutPlan,
+  saveCustomWorkoutPlan,
+  type CustomWorkoutPlanData
+} from "../storage/customWorkoutPlan";
 import {
   loadCarbRotationOffset,
   loadTrainingFocusByDay
@@ -79,6 +87,11 @@ const zhText: Record<string, string> = {
   "Progress load only when bar speed and form stay consistent.": "只有杠速和动作质量稳定时才增加重量。",
   "Carb cycling alignment stays active.": "仍会跟随你的碳水循环结构进行训练日匹配。",
   "Default plan follows your saved fat-loss setup.": "默认训练会跟随你保存的减脂设置。",
+  "User-defined workout week saved from the custom builder.": "通过自定义编辑器保存的一周训练计划。",
+  "Users who want full control over exercise selection.": "希望完全控制动作选择的用户。",
+  "User-defined weekly workout plan.": "用户自定义一周训练计划。",
+  "User-defined session": "用户自定义训练日",
+  "Add exercises in Custom Plan.": "在自定义计划中添加动作。",
   "keep 2–3 reps in reserve": "保留 2–3 次余力",
   "stop 1–2 reps before failure": "距离力竭保留 1–2 次",
   "use training max, no grinders during a cut": "使用 training max，减脂期不要硬磨极限次数",
@@ -110,6 +123,8 @@ const copy = {
     chooseSystem: "Choose training system",
     close: "Close",
     viewExercise: "View exercise animation",
+    customPlan: "Custom Plan",
+    customPlanDescription: "Create your own weekly plan from ExerciseGymGifsDB.",
     categories: {
       default: "Default",
       powerlifting: "Powerlifting",
@@ -137,6 +152,8 @@ const copy = {
     chooseSystem: "选择训练体系",
     close: "关闭",
     viewExercise: "查看动作动图",
+    customPlan: "自定义计划",
+    customPlanDescription: "从 ExerciseGymGifsDB 创建你自己的周训练计划。",
     categories: {
       default: "默认",
       powerlifting: "力量举",
@@ -154,26 +171,36 @@ export function WorkoutPlanner() {
   const t = copy[language];
   const savedInput = loadInput();
   const [selectorOpen, setSelectorOpen] = useState(false);
+  const [customBuilderOpen, setCustomBuilderOpen] = useState(false);
+  const [customPlan, setCustomPlan] = useState<CustomWorkoutPlanData | null>(loadCustomWorkoutPlan);
   const [selectedGif, setSelectedGif] = useState<SelectedWorkoutGif | null>(null);
   const [programId, setProgramId] = useState<WorkoutProgramId>(loadProgramId);
   const result = useMemo(() => (savedInput ? buildResult(savedInput) : null), [savedInput]);
-  const plan = useMemo(
-    () =>
-      savedInput && result
-        ? buildWorkoutPlan({
-            input: savedInput,
-            result,
-            programId,
-            rotationOffset: loadCarbRotationOffset(),
-            focusByDay: loadTrainingFocusByDay()
-          })
-        : null,
-    [programId, savedInput, result]
-  );
+  const plan = useMemo(() => {
+    if (customPlan) return customWorkoutToWorkoutPlan(customPlan);
+    return savedInput && result
+      ? buildWorkoutPlan({
+          input: savedInput,
+          result,
+          programId,
+          rotationOffset: loadCarbRotationOffset(),
+          focusByDay: loadTrainingFocusByDay()
+        })
+      : null;
+  }, [customPlan, programId, savedInput, result]);
 
   function chooseProgram(nextProgramId: WorkoutProgramId) {
+    clearCustomWorkoutPlan();
+    setCustomPlan(null);
     setProgramId(nextProgramId);
     window.localStorage.setItem(PROGRAM_KEY, nextProgramId);
+    setSelectorOpen(false);
+  }
+
+  function saveCustomPlan(nextPlan: CustomWorkoutPlanData) {
+    const savedPlan = saveCustomWorkoutPlan(nextPlan);
+    setCustomPlan(savedPlan);
+    setCustomBuilderOpen(false);
     setSelectorOpen(false);
   }
 
@@ -244,17 +271,25 @@ export function WorkoutPlanner() {
               <div className="program-category" key={category}>
                 <div className="program-category-title">{t.categories[category]}</div>
                 {options.map((option) => (
-                  <button className={`program-option ${programId === option.id ? "active" : ""}`} type="button" onClick={() => chooseProgram(option.id)} key={option.id}>
+                  <button className={`program-option ${!customPlan && programId === option.id ? "active" : ""}`} type="button" onClick={() => chooseProgram(option.id)} key={option.id}>
                     <strong>{option.name}</strong>
                     <span>{tr(option.description, language)}</span>
                   </button>
                 ))}
               </div>
             ))}
+            <div className="program-category">
+              <div className="program-category-title">{t.customPlan}</div>
+              <button className={`program-option custom-plan-option ${customPlan ? "active" : ""}`} type="button" onClick={() => setCustomBuilderOpen(true)}>
+                <strong>{t.customPlan}</strong>
+                <span>{t.customPlanDescription}</span>
+              </button>
+            </div>
           </section>
         </div>
       )}
 
+      {customBuilderOpen && <CustomWorkoutBuilderOverlay initialPlan={customPlan} language={language} onBack={() => setCustomBuilderOpen(false)} onSave={saveCustomPlan} />}
       {selectedGif && <WorkoutGifOverlay gif={selectedGif} labels={t} onClose={() => setSelectedGif(null)} />}
     </main>
   );
@@ -293,24 +328,26 @@ function WorkoutDayCard({ day, labels, language, onOpenGif }: { day: WorkoutDay;
 }
 
 function WorkoutExerciseRow({ exercise, labels, language, onOpenGif }: { exercise: WorkoutExercise; labels: typeof copy.en | typeof copy.zh; language: Language; onOpenGif: (gif: SelectedWorkoutGif) => void }) {
+  const customGif = exercise as WorkoutExercise & { gifUrl?: string; thumbUrl?: string; sourceName?: string };
   const match = getExerciseGifMatch(exercise.name);
   const asset = match.asset;
-  const gifUrl = asset ? getExerciseGifUrl(asset) : undefined;
-  const thumbUrl = asset ? getExerciseThumbUrl(asset) : undefined;
+  const gifUrl = customGif.gifUrl ?? (asset ? getExerciseGifUrl(asset) : undefined);
+  const thumbUrl = customGif.thumbUrl ?? (asset ? getExerciseThumbUrl(asset) : undefined) ?? gifUrl;
+  const sourceName = customGif.sourceName ?? asset?.sourceName ?? exercise.name;
 
   return (
-    <div className={`exercise-row ${gifUrl && thumbUrl ? "has-gif" : ""}`}>
+    <div className={`exercise-row ${gifUrl ? "has-gif" : ""}`}>
       <div className="exercise-copy">
         <strong>{exercise.name}</strong>
         <span className="exercise-prescription">{exercise.prescription}</span>
         {exercise.note && <em>{tr(exercise.note, language)}</em>}
       </div>
-      {gifUrl && thumbUrl && asset && (
+      {gifUrl && thumbUrl && (
         <button
           className="exercise-gif-button"
           type="button"
           aria-label={`${labels.viewExercise}: ${exercise.name}`}
-          onClick={() => onOpenGif({ title: exercise.name, prescription: exercise.prescription, sourceName: asset.sourceName, gifUrl, thumbUrl })}
+          onClick={() => onOpenGif({ title: exercise.name, prescription: exercise.prescription, sourceName, gifUrl, thumbUrl })}
         >
           <img
             src={gifUrl}
