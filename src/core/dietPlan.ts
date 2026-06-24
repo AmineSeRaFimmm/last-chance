@@ -104,10 +104,31 @@ export const FOOD_CATALOG = { proteins, carbs, vegetables, fruits, fats, dairy }
 export type FoodCategory = keyof typeof FOOD_CATALOG;
 export type FoodWithCategory = FoodItem & { category: FoodCategory };
 
+const customFoodOptions: Partial<Record<FoodCategory, FoodItem[]>> = {
+  proteins: [
+    { name: "Salmon", kcal: 208, protein: 20.4, carbs: 0, fat: 13.4 },
+    { name: "Whey protein", kcal: 400, protein: 80, carbs: 10, fat: 6.7 }
+  ],
+  vegetables: [
+    { name: "Bell pepper", kcal: 31, protein: 1, carbs: 6, fat: 0.3 }
+  ],
+  fats: [
+    { name: "Cashews", kcal: 553, protein: 18.2, carbs: 30.2, fat: 43.9 }
+  ],
+  dairy: [
+    { name: "Milk", kcal: 61, protein: 3.2, carbs: 4.8, fat: 3.3 }
+  ]
+};
+
 export function getAllFoods(): FoodWithCategory[] {
-  return Object.entries(FOOD_CATALOG).flatMap(([category, foods]) =>
+  const baseFoods = Object.entries(FOOD_CATALOG).flatMap(([category, foods]) =>
     foods.map((food) => ({ ...food, category: category as FoodCategory }))
   );
+  const customFoods = Object.entries(customFoodOptions).flatMap(([category, foods]) =>
+    (foods ?? []).map((food) => ({ ...food, category: category as FoodCategory }))
+  );
+
+  return [...baseFoods, ...customFoods];
 }
 
 export function getFoodByName(name: string): FoodWithCategory | null {
