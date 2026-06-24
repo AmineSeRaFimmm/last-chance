@@ -131,7 +131,7 @@ const copy = {
     close: "Close",
     viewExercise: "View exercise animation",
     customPlan: "Custom Plan",
-    customPlanDescription: "Create your own weekly plan from ExerciseGymGifsDB.",
+    customPlanDescription: "创建自己的专业周训练计划",
     categories: {
       default: "Default",
       powerlifting: "Powerlifting",
@@ -160,7 +160,7 @@ const copy = {
     close: "关闭",
     viewExercise: "查看动作动图",
     customPlan: "自定义计划",
-    customPlanDescription: "从 ExerciseGymGifsDB 创建你自己的周训练计划。",
+    customPlanDescription: "创建自己的专业周训练计划",
     categories: {
       default: "默认",
       powerlifting: "力量举",
