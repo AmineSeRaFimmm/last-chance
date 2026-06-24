@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CustomWorkoutBuilderOverlay } from "./CustomWorkoutBuilderOverlay";
 import { buildSafeCarbCyclingPlan as buildCarbCyclingPlan } from "../core/carbCyclingSafePlan";
 import { getExerciseGifMatch, getExerciseGifUrl, getExerciseThumbUrl } from "../core/exerciseGifMap";
+import { markImageCached, preloadImage, warmImageCache } from "../core/imageCache";
 import { buildStandardPlan } from "../core/standardPlan";
 import type { PlanResult, UserInput } from "../core/types";
 import {
@@ -34,6 +35,12 @@ interface SelectedWorkoutGif {
   sourceName: string;
   gifUrl: string;
   thumbUrl: string;
+}
+
+interface WorkoutExerciseMedia {
+  gifUrl?: string;
+  thumbUrl?: string;
+  sourceName: string;
 }
 
 const PROGRAM_KEY = "last_chance_workout_program";
@@ -189,6 +196,11 @@ export function WorkoutPlanner() {
       : null;
   }, [customPlan, programId, savedInput, result]);
 
+  useEffect(() => {
+    if (!plan) return;
+    warmImageCache(plan.days.flatMap((day) => day.exercises.map((exercise) => getWorkoutExerciseMedia(exercise).thumbUrl)), 24);
+  }, [plan]);
+
   function chooseProgram(nextProgramId: WorkoutProgramId) {
     clearCustomWorkoutPlan();
     setCustomPlan(null);
@@ -328,12 +340,7 @@ function WorkoutDayCard({ day, labels, language, onOpenGif }: { day: WorkoutDay;
 }
 
 function WorkoutExerciseRow({ exercise, labels, language, onOpenGif }: { exercise: WorkoutExercise; labels: typeof copy.en | typeof copy.zh; language: Language; onOpenGif: (gif: SelectedWorkoutGif) => void }) {
-  const customGif = exercise as WorkoutExercise & { gifUrl?: string; thumbUrl?: string; sourceName?: string };
-  const match = getExerciseGifMatch(exercise.name);
-  const asset = match.asset;
-  const gifUrl = customGif.gifUrl ?? (asset ? getExerciseGifUrl(asset) : undefined);
-  const thumbUrl = customGif.thumbUrl ?? (asset ? getExerciseThumbUrl(asset) : undefined) ?? gifUrl;
-  const sourceName = customGif.sourceName ?? asset?.sourceName ?? exercise.name;
+  const { gifUrl, thumbUrl, sourceName } = getWorkoutExerciseMedia(exercise);
 
   return (
     <div className={`exercise-row ${gifUrl ? "has-gif" : ""}`}>
@@ -347,12 +354,17 @@ function WorkoutExerciseRow({ exercise, labels, language, onOpenGif }: { exercis
           className="exercise-gif-button"
           type="button"
           aria-label={`${labels.viewExercise}: ${exercise.name}`}
-          onClick={() => onOpenGif({ title: exercise.name, prescription: exercise.prescription, sourceName, gifUrl, thumbUrl })}
+          onClick={() => {
+            void preloadImage(gifUrl);
+            onOpenGif({ title: exercise.name, prescription: exercise.prescription, sourceName, gifUrl, thumbUrl });
+          }}
+          onMouseEnter={() => void preloadImage(gifUrl)}
         >
           <img
-            src={gifUrl}
+            src={thumbUrl}
             alt=""
             loading="lazy"
+            onLoad={() => markImageCached(thumbUrl)}
             onError={(event) => {
               event.currentTarget.parentElement?.classList.add("is-hidden");
             }}
@@ -364,12 +376,16 @@ function WorkoutExerciseRow({ exercise, labels, language, onOpenGif }: { exercis
 }
 
 function WorkoutGifOverlay({ gif, labels, onClose }: { gif: SelectedWorkoutGif; labels: typeof copy.en | typeof copy.zh; onClose: () => void }) {
+  useEffect(() => {
+    void preloadImage(gif.gifUrl);
+  }, [gif.gifUrl]);
+
   return (
     <div className="workout-gif-overlay" role="dialog" aria-modal="true" aria-label={gif.title}>
       <button className="workout-gif-backdrop" type="button" aria-label={labels.close} onClick={onClose} />
       <section className="workout-gif-modal">
         <div className="workout-gif-frame">
-          <img src={gif.gifUrl} alt={gif.sourceName} />
+          <img src={gif.gifUrl} alt={gif.sourceName} onLoad={() => markImageCached(gif.gifUrl)} />
         </div>
         <div className="workout-gif-caption">
           <strong>{gif.title}</strong>
@@ -378,6 +394,17 @@ function WorkoutGifOverlay({ gif, labels, onClose }: { gif: SelectedWorkoutGif; 
       </section>
     </div>
   );
+}
+
+function getWorkoutExerciseMedia(exercise: WorkoutExercise): WorkoutExerciseMedia {
+  const customGif = exercise as WorkoutExercise & { gifUrl?: string; thumbUrl?: string; sourceName?: string };
+  const match = getExerciseGifMatch(exercise.name);
+  const asset = match.asset;
+  const gifUrl = customGif.gifUrl ?? (asset ? getExerciseGifUrl(asset) : undefined);
+  const thumbUrl = customGif.thumbUrl ?? (asset ? getExerciseThumbUrl(asset) : undefined) ?? gifUrl;
+  const sourceName = customGif.sourceName ?? asset?.sourceName ?? exercise.name;
+
+  return { gifUrl, thumbUrl, sourceName };
 }
 
 function tr(value: string, language: Language): string {
