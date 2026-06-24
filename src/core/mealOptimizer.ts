@@ -151,6 +151,8 @@ function scoreEntries(entries: OptimizerEntry[], target: MealTarget): number {
 }
 
 function initialGramsForFood(food: FoodWithCategory, allFoods: FoodWithCategory[], target: MealTarget): number {
+  if (food.name === "Whey protein") return 30;
+
   const role = getMealFoodRole(food);
   const sameRoleCount = allFoods.filter((item) => getMealFoodRole(item) === role).length || 1;
 
@@ -170,6 +172,7 @@ function initialGramsForCategory(category: FoodCategory): number {
 }
 
 function boundsForFood(food: FoodWithCategory): { min: number; max: number } {
+  if (food.name === "Whey protein") return { min: 30, max: 30 };
   if (food.category === "proteins") return { min: 40, max: 360 };
   if (food.category === "carbs") return { min: 5, max: 420 };
   if (food.category === "vegetables") return { min: 50, max: 300 };
