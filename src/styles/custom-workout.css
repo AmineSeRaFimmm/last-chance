@@ -1,3 +1,7 @@
+.workout-selector-overlay {
+  place-items: center;
+}
+
 .custom-workout-builder-overlay {
   position: fixed;
   inset: 0;
@@ -5,13 +9,13 @@
   display: grid;
   place-items: center;
   padding: 18px;
-  background: rgba(0, 0, 0, 0.22);
-  backdrop-filter: blur(18px);
+  background: rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(16px);
 }
 
 .custom-workout-builder-modal {
-  width: min(760px, 100%);
-  height: min(88vh, 820px);
+  width: min(680px, 100%);
+  height: min(82vh, 760px);
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   gap: 14px;
@@ -32,6 +36,10 @@
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: start;
   gap: 12px;
+}
+
+.custom-builder-head.is-editing {
+  grid-template-columns: auto minmax(0, 1fr);
 }
 
 .custom-builder-head div {
@@ -137,6 +145,10 @@
   font-weight: 850;
 }
 
+.custom-builder-day-pills span.removable {
+  cursor: pointer;
+}
+
 .custom-builder-exercise-panel {
   min-height: 0;
   display: grid;
@@ -193,8 +205,12 @@
 }
 
 .custom-exercise-result {
-  touch-action: none;
   user-select: none;
+}
+
+.custom-exercise-drag-zone {
+  touch-action: none;
+  cursor: grab;
 }
 
 .custom-prescription-capsules {
@@ -230,7 +246,7 @@
 }
 
 .custom-exercise-gif {
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .custom-builder-empty {
@@ -259,15 +275,47 @@
   translate: -50% -50%;
 }
 
+.custom-builder-gif-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+}
+
+.custom-builder-gif-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(0, 0, 0, 0.24);
+  backdrop-filter: blur(20px);
+}
+
+.custom-builder-gif-modal {
+  position: relative;
+  z-index: 1;
+  width: min(420px, 100%);
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 34px;
+  background: rgba(247, 247, 249, 0.74);
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  box-shadow: 0 28px 76px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(22px) saturate(1.2);
+}
+
 @media (max-width: 520px) {
   .custom-workout-builder-overlay {
-    padding: 12px;
+    padding: 18px;
   }
 
   .custom-workout-builder-modal {
-    height: min(90vh, 820px);
-    padding: 14px;
-    border-radius: 28px;
+    width: min(680px, 100%);
+    height: min(82vh, 760px);
+    padding: 18px;
+    border-radius: 32px;
   }
 
   .custom-workout-builder-modal.is-editing {
@@ -278,8 +326,20 @@
     grid-template-columns: auto minmax(0, 1fr) auto;
   }
 
+  .custom-builder-head.is-editing {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
   .custom-builder-exercise-panel {
     padding: 10px;
     border-radius: 22px;
+  }
+
+  .custom-builder-gif-overlay {
+    padding: 16px;
+  }
+
+  .custom-builder-gif-modal {
+    border-radius: 30px;
   }
 }
