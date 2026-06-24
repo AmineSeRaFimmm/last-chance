@@ -1,6 +1,7 @@
 import type { WorkoutDay, WorkoutExercise, WorkoutPlan, WorkoutProgramOption } from "../core/workoutPlan";
 
 export interface CustomWorkoutExercise extends WorkoutExercise {
+  sourceId?: string;
   gifUrl: string;
   thumbUrl?: string;
   sourceName: string;
