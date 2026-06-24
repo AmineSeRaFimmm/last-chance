@@ -44,6 +44,7 @@ const copy = {
     outside: "Ingredient field",
     apply: "Apply",
     cancel: "Cancel",
+    more: "More",
     protein: "Protein",
     carbs: "Carbs",
     fats: "Fats",
@@ -54,6 +55,7 @@ const copy = {
     outside: "食材选择区",
     apply: "Apply",
     cancel: "Cancel",
+    more: "More",
     protein: "Protein",
     carbs: "Carbs",
     fats: "Fats",
@@ -96,6 +98,7 @@ export function MealComposerOverlay({
   const [activeDrag, setActiveDrag] = useState<ActiveDrag | null>(null);
   const [externalPositions, setExternalPositions] = useState<Record<string, CardPosition>>({});
   const [selectedFoodNames, setSelectedFoodNames] = useState(() => meal.items.map((item) => item.name));
+  const [foodPage, setFoodPage] = useState(0);
   const preview = useMemo(
     () => optimizeMealFromFoodNames(meal.name, baseMeal, selectedFoodNames),
     [baseMeal, meal.name, selectedFoodNames]
@@ -104,6 +107,8 @@ export function MealComposerOverlay({
     () => prioritizeFoods(getMealFoodOptions().filter((food) => !selectedFoodNames.includes(food.name)), meal),
     [meal, selectedFoodNames]
   );
+  const foodPages = Math.max(1, Math.ceil(options.length / orbit.length));
+  const visibleOptions = options.slice((foodPage % foodPages) * orbit.length, ((foodPage % foodPages) + 1) * orbit.length);
   const selectedFoods = selectedFoodNames
     .map((name) => getMealFoodOptions().find((food) => food.name === name))
     .filter((food): food is FoodWithCategory => Boolean(food));
@@ -112,6 +117,10 @@ export function MealComposerOverlay({
   useEffect(() => {
     activeDragRef.current = activeDrag;
   }, [activeDrag]);
+
+  useEffect(() => {
+    if (foodPage >= foodPages) setFoodPage(0);
+  }, [foodPage, foodPages]);
 
   useEffect(() => {
     const bodyOverflow = document.body.style.overflow;
@@ -240,7 +249,7 @@ export function MealComposerOverlay({
       <button className="meal-composer-backdrop" type="button" aria-label={t.cancel} onClick={onClose} />
 
       <div className="ingredient-orbit" aria-label={t.outside} ref={ingredientOrbitRef}>
-        {options.slice(0, orbit.length).map((food, index) => {
+        {visibleOptions.map((food, index) => {
           const position = getCardPosition(food.name, index);
           return (
             <button
@@ -278,7 +287,7 @@ export function MealComposerOverlay({
         </div>
 
         <div className="meal-composer-actions">
-          <button className="secondary-button" type="button" onClick={onClose}>{t.cancel}</button>
+          <button className="secondary-button" type="button" onClick={() => setFoodPage((current) => (current + 1) % foodPages)}>{t.more}</button>
           <button className="primary-button no-top-margin" disabled={applyDisabled} type="button" onClick={() => onApply(selectedFoodNames)}>{t.apply}</button>
         </div>
       </section>
