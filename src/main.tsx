@@ -6,6 +6,7 @@ import { installProjectionWheel } from "./core/projectionWheel";
 import "./styles/global.css";
 import "./styles/progress.css";
 import "./styles/navigation.css";
+import "./styles/custom-workout.css";
 import "./styles/projection.css";
 import "./styles/diet.css";
 import "./styles/timeline.css";
