@@ -53,6 +53,9 @@
   position: fixed;
   inset: 0;
   z-index: 100;
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+  transition: opacity var(--motion-slow) var(--ease-ios), transform var(--motion-slow) var(--ease-ios);
 }
 
 .motion-fullscreen-sheet[data-motion-state="enter"],
@@ -61,20 +64,14 @@
   transform: translate3d(0, 20px, 0) scale(0.99);
 }
 
-.motion-fullscreen-sheet {
+.motion-immersive {
   opacity: 1;
-  transform: translate3d(0, 0, 0) scale(1);
-  transition: opacity var(--motion-slow) var(--ease-ios), transform var(--motion-slow) var(--ease-ios);
+  transition: opacity var(--motion-normal) var(--ease-ios);
 }
 
 .motion-immersive[data-motion-state="enter"],
 .motion-immersive[data-motion-state="exit"] {
   opacity: 0;
-}
-
-.motion-immersive {
-  opacity: 1;
-  transition: opacity var(--motion-normal) var(--ease-ios);
 }
 
 .workout-selector-modal::before {
@@ -87,7 +84,8 @@
   margin: -4px 0 2px;
 }
 
-.workout-gif-modal[data-flip-origin="true"] {
+.workout-gif-modal[data-flip-origin="true"],
+.custom-builder-gif-modal[data-flip-origin="true"] {
   --flip-x: 0px;
   --flip-y: 0px;
   --flip-scale-x: 0.25;
@@ -95,7 +93,9 @@
 }
 
 .workout-gif-modal[data-flip-origin="true"][data-motion-state="enter"],
-.workout-gif-modal[data-flip-origin="true"][data-motion-state="exit"] {
+.workout-gif-modal[data-flip-origin="true"][data-motion-state="exit"],
+.custom-builder-gif-modal[data-flip-origin="true"][data-motion-state="enter"],
+.custom-builder-gif-modal[data-flip-origin="true"][data-motion-state="exit"] {
   opacity: 0.72;
   border-radius: 18px;
   transform: translate3d(var(--flip-x), var(--flip-y), 0) scale(var(--flip-scale-x), var(--flip-scale-y));
@@ -170,7 +170,9 @@
   .motion-fullscreen-sheet[data-motion-state="enter"],
   .motion-fullscreen-sheet[data-motion-state="exit"],
   .workout-gif-modal[data-flip-origin="true"][data-motion-state="enter"],
-  .workout-gif-modal[data-flip-origin="true"][data-motion-state="exit"] {
+  .workout-gif-modal[data-flip-origin="true"][data-motion-state="exit"],
+  .custom-builder-gif-modal[data-flip-origin="true"][data-motion-state="enter"],
+  .custom-builder-gif-modal[data-flip-origin="true"][data-motion-state="exit"] {
     transform: none !important;
   }
 }
