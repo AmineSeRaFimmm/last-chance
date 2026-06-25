@@ -2,7 +2,7 @@ const STORAGE_KEY = "last_chance_last_input";
 const LANGUAGE_KEY = "last_chance_language";
 const STARTED_KEY = "last_chance_plan_started";
 const DRAFT_KEY = "last_chance_plan_draft";
-const GENERATED_MARK = "planGeneratedSection";
+const GENERATED_ATTR = "data-plan-generated-section";
 
 const copy = {
   en: {
@@ -139,7 +139,7 @@ function refreshPlanHome(): void {
     moveAfter(statusCard, resultCard);
   }
 
-  shell.querySelectorAll(`[data-${GENERATED_MARK}="true"]`).forEach((section) => {
+  shell.querySelectorAll(`[${GENERATED_ATTR}="true"]`).forEach((section) => {
     if (section instanceof HTMLElement && !section.classList.contains("plan-result-card") && !section.classList.contains("plan-home-status-card")) {
       section.hidden = mode === "start";
     }
@@ -163,7 +163,7 @@ function markGeneratedSections(shell: HTMLElement): void {
 
   children.slice(resultIndex).forEach((child) => {
     if (child.classList.contains("plan-settings-card")) return;
-    child.dataset[GENERATED_MARK] = "true";
+    if (child.getAttribute(GENERATED_ATTR) !== "true") child.setAttribute(GENERATED_ATTR, "true");
   });
 }
 
@@ -196,7 +196,10 @@ function ensureResultBanner(resultCard: HTMLElement, mode: "draft" | "saved"): v
   const labels = getCopy();
   const existing = resultCard.querySelector(".plan-result-banner");
   const banner = existing instanceof HTMLElement ? existing : document.createElement("div");
+  if (banner.dataset.planMode === mode) return;
+
   banner.className = "plan-result-banner";
+  banner.dataset.planMode = mode;
   banner.innerHTML = `
     <div>
       <div class="card-title">${labels.result}</div>
@@ -219,8 +222,8 @@ function ensureStatusCard(shell: HTMLElement): HTMLElement {
 function syncStatusCard(statusCard: HTMLElement, shell: HTMLElement): void {
   const labels = getCopy();
   const risk = shell.querySelector(".plan-body-data-card .timeline-risk-panel");
-  statusCard.innerHTML = `<div class="card-title">${labels.status}</div>`;
-  if (risk instanceof HTMLElement) statusCard.appendChild(risk.cloneNode(true));
+  const nextHtml = `<div class="card-title">${labels.status}</div>${risk instanceof HTMLElement ? risk.outerHTML : ""}`;
+  if (statusCard.innerHTML !== nextHtml) statusCard.innerHTML = nextHtml;
 }
 
 function moveAfter(node: Element, reference: Element | null): void {
