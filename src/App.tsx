@@ -10,7 +10,7 @@ import { loadInput, saveInput } from "./storage/localPlan";
 
 type Language = "en" | "zh";
 type TimelineStatus = "empty" | "maintain" | "safe" | "standard" | "aggressive" | "high" | "blocked";
-type SetupStage = "intro" | "form";
+type SetupStage = "intro" | "plan" | "body" | "review";
 
 const LANGUAGE_KEY = "last_chance_language";
 const DEFAULT_TIMELINE_WEEKS = 12;
@@ -106,16 +106,29 @@ const copy = {
     buildFirstDetail: "Start with the essential data. The app will not show default personal numbers before you save a real plan.",
     startSetup: "Start setup",
     setupHeader: "Set your baseline",
-    setupSubhead: "Choose your plan style and tune the key numbers before saving locally.",
+    setupSubhead: "Move through one focused step at a time, then review the plan before saving.",
     stepBody: "Body data",
     stepGoal: "Goal weight",
     stepTimeline: "Timeline",
     changeData: "Change data",
     close: "Close",
     status: "Status",
-    readyTitle: "Your plan is ready",
-    readyDetail: "This is your saved local plan. Use Change data when you want to update it.",
-    readyBadge: "Saved"
+    readyTitle: "Core target",
+    readyDetail: "Your saved target for the current plan.",
+    readyBadge: "Saved",
+    next: "Next",
+    back: "Back",
+    review: "Review",
+    saveAndView: "Save and view plan",
+    stepPlanTitle: "Choose your setup",
+    stepPlanDetail: "Select the biological setup, plan style, and normal activity level.",
+    stepBodyTitle: "Tune the numbers",
+    stepBodyDetail: "Adjust the key body data with light sliders or precise steppers.",
+    stepReviewTitle: "Review before saving",
+    stepReviewDetail: "Confirm the target pace and core outputs before the app builds your dashboard.",
+    coreTarget: "Core target",
+    planStyle: "Plan style",
+    notSet: "Not set"
   },
   zh: {
     eyebrow: "证据导向减脂计划",
@@ -183,16 +196,29 @@ const copy = {
     buildFirstDetail: "先填写关键数据。保存真实计划之前，App 不展示默认个人数字。",
     startSetup: "开始设置",
     setupHeader: "建立基础数据",
-    setupSubhead: "先选择方案风格，再微调关键数据后保存到本机。",
+    setupSubhead: "一步只处理一个重点，最后确认后再保存计划。",
     stepBody: "身体数据",
     stepGoal: "目标体重",
     stepTimeline: "完成周期",
     changeData: "Change data",
     close: "关闭",
     status: "状态",
-    readyTitle: "计划已就绪",
-    readyDetail: "这是你已保存的本地计划。需要更新时，点击 Change data。",
-    readyBadge: "已保存"
+    readyTitle: "核心目标",
+    readyDetail: "这是当前计划保存后的主要目标。",
+    readyBadge: "已保存",
+    next: "下一步",
+    back: "返回",
+    review: "确认",
+    saveAndView: "保存并查看计划",
+    stepPlanTitle: "选择计划基础",
+    stepPlanDetail: "选择身体设置、计划类型和日常活动水平。",
+    stepBodyTitle: "微调关键数据",
+    stepBodyDetail: "用滑杆和精确微调设置核心身体数据。",
+    stepReviewTitle: "保存前确认",
+    stepReviewDetail: "确认目标速度和核心输出后，再进入计划首页。",
+    coreTarget: "核心目标",
+    planStyle: "方案类型",
+    notSet: "未设置"
   }
 } as const;
 
@@ -213,7 +239,7 @@ export default function App() {
   const [saved, setSaved] = useState(false);
   const [hasSavedPlan, setHasSavedPlan] = useState(Boolean(savedInput));
   const [setupOpen, setSetupOpen] = useState(!savedInput);
-  const [setupStage, setSetupStage] = useState<SetupStage>(savedInput ? "form" : "intro");
+  const [setupStage, setSetupStage] = useState<SetupStage>(savedInput ? "plan" : "intro");
 
   const t = copy[language];
   const effectivePlanType: PlanType = sex === "female" ? "standard" : planType;
@@ -240,6 +266,9 @@ export default function App() {
   }, [sex, effectivePlanType, age, heightCm, weightKg, targetWeightKg, expectedTimelineWeeks, activityFactor, trainingDaysPerWeek, goalRatePctPerWeek, proteinFactor]);
 
   const projection = useMemo(() => buildTimelineProjection(weightKg, result.weeklyLossKg, targetWeightKg, expectedTimelineWeeks), [weightKg, result.weeklyLossKg, targetWeightKg, expectedTimelineWeeks]);
+  const setupStepIndex = setupStage === "plan" ? 1 : setupStage === "body" ? 2 : setupStage === "review" ? 3 : 0;
+  const targetLabel = targetWeightKg === undefined ? t.notSet : `${targetWeightKg.toFixed(1)} kg`;
+  const coreCalories = result.kind === "standard" ? `${result.daily.calories} kcal` : `${result.weeklyCalories} kcal/week`;
 
   useEffect(() => setSaved(false), [result, timelineRisk]);
 
@@ -263,17 +292,21 @@ export default function App() {
     saveInput(input);
     setSaved(true);
     setHasSavedPlan(true);
-    setSetupStage("form");
+    setSetupStage("plan");
     setSetupOpen(false);
   }
 
   function openSetupForm() {
-    setSetupStage("form");
+    setSetupStage("plan");
     setSetupOpen(true);
   }
 
-  const setupForm = (
-    <>
+  const setupPlanStep = (
+    <div className="setup-step-pane">
+      <div className="setup-step-copy">
+        <strong>{t.stepPlanTitle}</strong>
+        <span>{t.stepPlanDetail}</span>
+      </div>
       <section className="card plan-settings-card plan-choice-section">
         <div className="card-title">{t.sex}</div>
         <div className="choice-card-grid two">
@@ -281,7 +314,6 @@ export default function App() {
           <PlanChoiceCard title={t.female} subtitle={t.femaleChoice} active={sex === "female"} onSelect={() => handleSexChange("female")} />
         </div>
       </section>
-
       {sex === "male" && (
         <section className="card plan-settings-card plan-choice-section">
           <div className="card-title">{t.plan}</div>
@@ -292,7 +324,6 @@ export default function App() {
           <p className="small-note">{t.carbNote}</p>
         </section>
       )}
-
       <section className="card plan-settings-card plan-choice-section">
         <div className="card-title">{t.activity}</div>
         <div className="choice-card-grid two">
@@ -301,7 +332,15 @@ export default function App() {
           ))}
         </div>
       </section>
+    </div>
+  );
 
+  const setupBodyStep = (
+    <div className="setup-step-pane">
+      <div className="setup-step-copy">
+        <strong>{t.stepBodyTitle}</strong>
+        <span>{t.stepBodyDetail}</span>
+      </div>
       <section className="card plan-body-data-card plan-settings-card">
         <div className="card-title">{t.bodyData}</div>
         <div className="picker-grid">
@@ -315,7 +354,32 @@ export default function App() {
         </div>
         <TimelineRiskPanel risk={timelineRisk} />
       </section>
-    </>
+    </div>
+  );
+
+  const setupReviewStep = (
+    <div className="setup-step-pane">
+      <div className="setup-step-copy">
+        <strong>{t.stepReviewTitle}</strong>
+        <span>{t.stepReviewDetail}</span>
+      </div>
+      <section className="card setup-review-card">
+        <div className="card-title">{t.coreTarget}</div>
+        <div className="review-hero-row">
+          <strong>{coreCalories}</strong>
+          <span>{effectivePlanType === "carbCycling" ? t.carbCycling : t.standard}</span>
+        </div>
+        <div className="target-insight-grid">
+          <div><span>{t.weight}</span><strong>{weightKg.toFixed(1)} kg</strong></div>
+          <div><span>{t.target}</span><strong>{targetLabel}</strong></div>
+          <div><span>{t.expectedLoss}</span><strong>{result.weeklyLossKg} kg/week</strong></div>
+        </div>
+      </section>
+      <section className="card plan-home-status-card">
+        <div className="card-title">{t.status}</div>
+        <TimelineRiskPanel risk={timelineRisk} />
+      </section>
+    </div>
   );
 
   return (
@@ -335,15 +399,24 @@ export default function App() {
 
       {hasSavedPlan && (
         <>
-          <section className="card accent-card plan-result-card">
+          <section className="card accent-card plan-target-card">
             <div className="plan-result-banner">
               <div>
-                <div className="card-title">{t.result}</div>
-                <h2>{t.readyTitle}</h2>
+                <div className="card-title">{t.coreTarget}</div>
+                <h2>{coreCalories}</h2>
                 <p>{t.readyDetail}</p>
               </div>
               <span>{t.readyBadge}</span>
             </div>
+            <div className="target-insight-grid">
+              <div><span>{t.planStyle}</span><strong>{effectivePlanType === "carbCycling" ? t.carbCycling : t.standard}</strong></div>
+              <div><span>{t.proteinShort}</span><strong>{result.kind === "standard" ? `${result.daily.proteinG} g` : `${result.highDay.proteinG} g`}</strong></div>
+              <div><span>{t.expectedLoss}</span><strong>{result.weeklyLossKg} kg/week</strong></div>
+            </div>
+          </section>
+
+          <section className="card accent-card plan-result-card">
+            <div className="card-title">{t.result}</div>
             {result.kind === "standard" ? (
               <MacroGrid data={result.daily} labels={t} />
             ) : (
@@ -406,7 +479,7 @@ export default function App() {
                     <span>{t.stepGoal}</span>
                     <span>{t.stepTimeline}</span>
                   </div>
-                  <button className="primary-button plan-start-button" onClick={() => setSetupStage("form")} type="button">{t.startSetup}</button>
+                  <button className="primary-button plan-start-button" onClick={() => setSetupStage("plan")} type="button">{t.startSetup}</button>
                 </div>
               </div>
             ) : (
@@ -418,13 +491,21 @@ export default function App() {
                   </div>
                   {hasSavedPlan && <button type="button" onClick={() => setSetupOpen(false)}>{t.close}</button>}
                 </div>
-                <div className="plan-sheet-body">
-                  {setupForm}
+                <div className="setup-stage-meter" aria-hidden="true">
+                  <span className={setupStepIndex >= 1 ? "active" : ""} />
+                  <span className={setupStepIndex >= 2 ? "active" : ""} />
+                  <span className={setupStepIndex >= 3 ? "active" : ""} />
                 </div>
-                <div className="plan-sheet-footer">
-                  <button className="change-plan-button plan-setup-save-button" disabled={timelineRisk.blocked} onClick={handleSave} type="button">
-                    {timelineRisk.blocked ? t.adjustTimeline : saved ? t.savedLocal : t.saveLocal}
-                  </button>
+                <div className="plan-sheet-body">
+                  {setupStage === "plan" && setupPlanStep}
+                  {setupStage === "body" && setupBodyStep}
+                  {setupStage === "review" && setupReviewStep}
+                </div>
+                <div className="plan-sheet-footer staged-footer">
+                  {setupStage !== "plan" && <button className="setup-secondary-button" type="button" onClick={() => setSetupStage(setupStage === "review" ? "body" : "plan")}>{t.back}</button>}
+                  {setupStage === "plan" && <button className="change-plan-button plan-setup-save-button" type="button" onClick={() => setSetupStage("body")}>{t.next}</button>}
+                  {setupStage === "body" && <button className="change-plan-button plan-setup-save-button" type="button" onClick={() => setSetupStage("review")}>{t.review}</button>}
+                  {setupStage === "review" && <button className="change-plan-button plan-setup-save-button" disabled={timelineRisk.blocked} onClick={handleSave} type="button">{timelineRisk.blocked ? t.adjustTimeline : saved ? t.savedLocal : t.saveAndView}</button>}
                 </div>
               </div>
             )}
