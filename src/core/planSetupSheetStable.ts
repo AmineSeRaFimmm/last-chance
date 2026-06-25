@@ -64,7 +64,7 @@ function onClick(event: MouseEvent): void {
   const target = event.target;
   if (!(target instanceof Element)) return;
   const shell = target.closest(".app-shell");
-  if (!(shell instanceof HTMLElement)) return;
+  if (!(shell instanceof HTMLElement) || !isPlanShell(shell)) return;
 
   if (target.closest(".plan-sheet-body .segmented button")) restoreSetupCards(shell);
 
@@ -89,6 +89,8 @@ function onClick(event: MouseEvent): void {
 function onClickAfterSave(event: MouseEvent): void {
   const target = event.target;
   if (!(target instanceof Element)) return;
+  const shell = target.closest(".app-shell");
+  if (!(shell instanceof HTMLElement) || !isPlanShell(shell)) return;
   if (!target.closest(".plan-sheet-footer .change-plan-button")) return;
   window.setTimeout(() => {
     if (hasPlan() && !document.querySelector(".timeline-risk-panel.blocked")) closeSheet();
@@ -118,9 +120,13 @@ function scheduleSync(): void {
 }
 
 function sync(): void {
-  const shell = document.querySelector(".app-shell");
-  if (!(shell instanceof HTMLElement)) return;
+  const shell = currentPlanShell();
+  if (!(shell instanceof HTMLElement)) {
+    cleanupNonPlanShells();
+    return;
+  }
 
+  cleanupNonPlanShells();
   markCards(shell);
   const stored = hasPlan();
   if (!stored && !open) open = true;
@@ -312,6 +318,27 @@ function allowedDashboardCard(card: HTMLElement): boolean {
   if (card.querySelector(".warning")) return true;
   const title = card.querySelector(".card-title")?.textContent?.toLowerCase() ?? "";
   return title.includes("execution") || title.includes("执行");
+}
+
+function currentPlanShell(): HTMLElement | null {
+  return Array.from(document.querySelectorAll<HTMLElement>(".app-shell")).find(isPlanShell) ?? null;
+}
+
+function isPlanShell(shell: HTMLElement): boolean {
+  if (shell.classList.contains("workout-shell") || shell.classList.contains("profile-shell") || shell.classList.contains("diet-shell")) return false;
+  return shell.querySelector(".hero-title")?.textContent?.trim() === "Last Chance";
+}
+
+function cleanupNonPlanShells(): void {
+  document.querySelectorAll<HTMLElement>(".app-shell").forEach((shell) => {
+    if (isPlanShell(shell)) return;
+    shell.querySelectorAll<HTMLElement>("[data-plan-open]").forEach((node) => node.remove());
+    shell.querySelectorAll<HTMLElement>(".plan-sheet-overlay").forEach((node) => node.remove());
+    shell.querySelectorAll<HTMLButtonElement>(".change-plan-button").forEach((button) => {
+      button.hidden = false;
+    });
+  });
+  if (!currentPlanShell()) document.body.classList.remove("plan-setup-lock");
 }
 
 function setText(node: HTMLElement, text: string): void {
