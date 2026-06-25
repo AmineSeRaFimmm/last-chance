@@ -45,6 +45,8 @@ const copy = {
 let booted = false;
 let open = false;
 let stage: Stage = "intro";
+let syncScheduled = false;
+let nextCardId = 0;
 
 bootPlanSetupSheet();
 
@@ -53,14 +55,18 @@ function bootPlanSetupSheet(): void {
   booted = true;
   document.addEventListener("click", onClick, true);
   document.addEventListener("click", onClickAfterSave, false);
-  const observer = new MutationObserver(sync);
+  const observer = new MutationObserver(scheduleSync);
   observer.observe(document.body, { childList: true, subtree: true });
-  window.requestAnimationFrame(sync);
+  scheduleSync();
 }
 
 function onClick(event: MouseEvent): void {
   const target = event.target;
-  if (!(target instanceof Element) || !target.closest(".app-shell")) return;
+  if (!(target instanceof Element)) return;
+  const shell = target.closest(".app-shell");
+  if (!(shell instanceof HTMLElement)) return;
+
+  if (target.closest(".plan-sheet-body .segmented button")) restoreSetupCards(shell);
 
   if (target.closest("[data-plan-open]")) {
     event.preventDefault();
@@ -86,7 +92,7 @@ function onClickAfterSave(event: MouseEvent): void {
   if (!target.closest(".plan-sheet-footer .change-plan-button")) return;
   window.setTimeout(() => {
     if (hasPlan() && !document.querySelector(".timeline-risk-panel.blocked")) closeSheet();
-    else sync();
+    else scheduleSync();
   }, 0);
 }
 
@@ -100,6 +106,15 @@ function closeSheet(): void {
   open = false;
   stage = "form";
   sync();
+}
+
+function scheduleSync(): void {
+  if (syncScheduled) return;
+  syncScheduled = true;
+  window.requestAnimationFrame(() => {
+    syncScheduled = false;
+    sync();
+  });
 }
 
 function sync(): void {
@@ -134,7 +149,7 @@ function syncHero(shell: HTMLElement): void {
     change.setAttribute("data-plan-open", "true");
     top.appendChild(change);
   }
-  change.textContent = labels.change;
+  setText(change, labels.change);
 }
 
 function syncDashboard(shell: HTMLElement, stored: boolean): void {
@@ -158,7 +173,8 @@ function syncDashboard(shell: HTMLElement, stored: boolean): void {
   if (stored && result instanceof HTMLElement) {
     const risk = shell.querySelector(".plan-body-data-card .timeline-risk-panel");
     const labels = labelsNow();
-    status.innerHTML = `<div class="card-title">${labels.status}</div>${risk instanceof HTMLElement ? risk.outerHTML : ""}`;
+    const nextHtml = `<div class="card-title">${labels.status}</div>${risk instanceof HTMLElement ? risk.outerHTML : ""}`;
+    setHtml(status, nextHtml);
     after(status, result);
   }
 
@@ -188,10 +204,7 @@ function syncSheet(shell: HTMLElement, stored: boolean): void {
   if (stage === "form") {
     const body = sheet.querySelector(".plan-sheet-body");
     if (body instanceof HTMLElement) {
-      setupCards(shell).forEach((card) => {
-        card.hidden = false;
-        if (card.parentElement !== body) body.appendChild(card);
-      });
+      setupCards(shell).forEach((card) => moveSetupCardToSheet(card, body));
     }
     moveSave(shell, sheet);
   }
@@ -218,13 +231,35 @@ function ensureSheet(shell: HTMLElement): HTMLElement {
   return sheet;
 }
 
+function moveSetupCardToSheet(card: HTMLElement, body: HTMLElement): void {
+  card.hidden = false;
+  if (!card.dataset.planCardId) card.dataset.planCardId = `setup-${++nextCardId}`;
+  const id = card.dataset.planCardId;
+  if (!card.parentElement?.closest(".plan-sheet-body") && id) {
+    const placeholder = document.createElement("span");
+    placeholder.hidden = true;
+    placeholder.dataset.planPlaceholderFor = id;
+    card.parentElement?.insertBefore(placeholder, card);
+  }
+  if (card.parentElement !== body) body.appendChild(card);
+}
+
+function restoreSetupCards(shell: HTMLElement): void {
+  const movedCards = Array.from(shell.querySelectorAll<HTMLElement>(".plan-sheet-body .plan-settings-card"));
+  movedCards.forEach((card) => {
+    const id = card.dataset.planCardId;
+    const placeholder = id ? shell.querySelector<HTMLElement>(`[data-plan-placeholder-for="${id}"]`) : null;
+    if (placeholder?.parentElement) placeholder.parentElement.replaceChild(card, placeholder);
+  });
+}
+
 function moveSave(shell: HTMLElement, sheet: HTMLElement): void {
   const labels = labelsNow();
   const footer = sheet.querySelector(".plan-sheet-footer");
   const save = originalSave(shell);
   if (!(footer instanceof HTMLElement) || !(save instanceof HTMLButtonElement)) return;
   save.hidden = false;
-  save.textContent = labels.save;
+  setText(save, labels.save);
   save.classList.add("plan-setup-save-button");
   if (save.parentElement !== footer) footer.appendChild(save);
 }
@@ -258,7 +293,8 @@ function resultBanner(card: HTMLElement): void {
     banner.className = "plan-result-banner";
     card.prepend(banner);
   }
-  banner.innerHTML = `<div><div class="card-title">${labels.result}</div><h2>${labels.savedTitle}</h2><p>${labels.savedText}</p></div><span>${labels.saved}</span>`;
+  const nextHtml = `<div><div class="card-title">${labels.result}</div><h2>${labels.savedTitle}</h2><p>${labels.savedText}</p></div><span>${labels.saved}</span>`;
+  setHtml(banner, nextHtml);
 }
 
 function statusCard(shell: HTMLElement): HTMLElement {
@@ -276,6 +312,14 @@ function allowedDashboardCard(card: HTMLElement): boolean {
   if (card.querySelector(".warning")) return true;
   const title = card.querySelector(".card-title")?.textContent?.toLowerCase() ?? "";
   return title.includes("execution") || title.includes("执行");
+}
+
+function setText(node: HTMLElement, text: string): void {
+  if (node.textContent !== text) node.textContent = text;
+}
+
+function setHtml(node: HTMLElement, html: string): void {
+  if (node.innerHTML !== html) node.innerHTML = html;
 }
 
 function after(node: Element, ref: Element | null): void {
