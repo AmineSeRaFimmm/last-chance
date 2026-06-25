@@ -8,6 +8,7 @@ import { loadInput, saveInput } from "./storage/localPlan";
 
 type Language = "en" | "zh";
 type TimelineStatus = "empty" | "maintain" | "safe" | "standard" | "aggressive" | "high" | "blocked";
+type SetupStage = "intro" | "form";
 
 const LANGUAGE_KEY = "last_chance_language";
 const DEFAULT_TIMELINE_WEEKS = 12;
@@ -94,7 +95,21 @@ const copy = {
     riskHigh: "High-risk range",
     riskBlocked: "Timeline too short",
     riskDetail:
-      "Requires about {loss} kg/week, equal to {rate}% of body weight per week. Standard recommendation: at least {standardWeeks} weeks; hard minimum: no less than {hardWeeks} weeks."
+      "Requires about {loss} kg/week, equal to {rate}% of body weight per week. Standard recommendation: at least {standardWeeks} weeks; hard minimum: no less than {hardWeeks} weeks.",
+    buildFirst: "Build your plan first",
+    buildFirstDetail: "Start with the essential data. The app will not show default personal numbers before you save a real plan.",
+    startSetup: "Start setup",
+    setupHeader: "Plan setup",
+    setupSubhead: "Set the core inputs, review the safety status, then save the plan locally.",
+    stepBody: "Body data",
+    stepGoal: "Goal weight",
+    stepTimeline: "Timeline",
+    changeData: "Change data",
+    close: "Close",
+    status: "Status",
+    readyTitle: "Your plan is ready",
+    readyDetail: "This is your saved local plan. Use Change data when you want to update it.",
+    readyBadge: "Saved"
   },
   zh: {
     eyebrow: "证据导向减脂计划",
@@ -153,7 +168,21 @@ const copy = {
     riskHigh: "高风险区间",
     riskBlocked: "时间过短，不建议生成计划",
     riskDetail:
-      "需要约 {loss} kg/周，等于当前体重的 {rate}%/周。标准建议至少 {standardWeeks} 周；硬性最低建议不少于 {hardWeeks} 周。"
+      "需要约 {loss} kg/周，等于当前体重的 {rate}%/周。标准建议至少 {standardWeeks} 周；硬性最低建议不少于 {hardWeeks} 周。",
+    buildFirst: "先建立你的计划",
+    buildFirstDetail: "先填写关键数据。保存真实计划之前，App 不展示默认个人数字。",
+    startSetup: "开始设置",
+    setupHeader: "计划设置",
+    setupSubhead: "设置核心输入，检查安全状态，然后保存到本机。",
+    stepBody: "身体数据",
+    stepGoal: "目标体重",
+    stepTimeline: "完成周期",
+    changeData: "Change data",
+    close: "关闭",
+    status: "状态",
+    readyTitle: "计划已就绪",
+    readyDetail: "这是你已保存的本地计划。需要更新时，点击 Change data。",
+    readyBadge: "已保存"
   }
 } as const;
 
@@ -172,6 +201,9 @@ export default function App() {
   const [trainingDaysPerWeek, setTrainingDaysPerWeek] = useState(savedInput?.trainingDaysPerWeek ?? 4);
   const [proteinFactor, setProteinFactor] = useState(savedInput?.proteinFactor ?? DEFAULT_INPUTS.male.proteinFactor);
   const [saved, setSaved] = useState(false);
+  const [hasSavedPlan, setHasSavedPlan] = useState(Boolean(savedInput));
+  const [setupOpen, setSetupOpen] = useState(!savedInput);
+  const [setupStage, setSetupStage] = useState<SetupStage>(savedInput ? "form" : "intro");
 
   const t = copy[language];
   const effectivePlanType: PlanType = sex === "female" ? "standard" : planType;
@@ -201,6 +233,11 @@ export default function App() {
 
   useEffect(() => setSaved(false), [result, timelineRisk]);
 
+  useEffect(() => {
+    document.body.classList.toggle("plan-setup-lock", setupOpen);
+    return () => document.body.classList.remove("plan-setup-lock");
+  }, [setupOpen]);
+
   function handleSexChange(nextSex: Sex) {
     setSex(nextSex);
     if (nextSex === "female") {
@@ -215,22 +252,19 @@ export default function App() {
     if (timelineRisk.blocked) return;
     saveInput(input);
     setSaved(true);
+    setHasSavedPlan(true);
+    setSetupStage("form");
+    setSetupOpen(false);
   }
 
-  return (
-    <main className="app-shell">
-      <section className="hero">
-        <div className="hero-topline">
-          <p className="eyebrow">{t.eyebrow}</p>
-          <button className="change-plan-button" disabled={timelineRisk.blocked} onClick={handleSave} type="button">
-            {timelineRisk.blocked ? t.adjustTimeline : saved ? t.savedLocal : t.saveLocal}
-          </button>
-        </div>
-        <h1 className="hero-title">Last Chance</h1>
-        <p className="hero-subtitle">{t.subtitle}</p>
-      </section>
+  function openSetupForm() {
+    setSetupStage("form");
+    setSetupOpen(true);
+  }
 
-      <section className="card">
+  const setupForm = (
+    <>
+      <section className="card plan-settings-card">
         <div className="card-title">{t.sex}</div>
         <div className="segmented two">
           <button className={sex === "male" ? "active" : ""} onClick={() => handleSexChange("male")} type="button">{t.male}</button>
@@ -239,7 +273,7 @@ export default function App() {
       </section>
 
       {sex === "male" && (
-        <section className="card">
+        <section className="card plan-settings-card">
           <div className="card-title">{t.plan}</div>
           <div className="segmented two">
             <button className={planType === "standard" ? "active" : ""} onClick={() => setPlanType("standard")} type="button">{t.standard}</button>
@@ -249,7 +283,7 @@ export default function App() {
         </section>
       )}
 
-      <section className="card">
+      <section className="card plan-body-data-card plan-settings-card">
         <div className="card-title">{t.bodyData}</div>
         <div className="input-grid">
           <NumberField label={t.age} value={age} min={18} max={80} onChange={setAge} />
@@ -270,56 +304,127 @@ export default function App() {
         </div>
         <TimelineRiskPanel risk={timelineRisk} />
       </section>
+    </>
+  );
 
-      <section className="card accent-card">
-        <div className="card-title">{t.result}</div>
-        {result.kind === "standard" ? (
-          <MacroGrid data={result.daily} labels={t} />
-        ) : (
-          <div className="cycle-stack">
-            <MacroBlock title={t.high} data={result.highDay} labels={t} />
-            <MacroBlock title={t.medium} data={result.mediumDay} labels={t} />
-            <MacroBlock title={t.low} data={result.lowDay} labels={t} />
-          </div>
-        )}
-        <div className="summary-line">
-          <span>RMR {result.rmr} kcal</span>
-          <span>TDEE {result.tdee} kcal</span>
-          <span>{t.expectedLoss} {result.weeklyLossKg} kg/week</span>
+  return (
+    <main className="app-shell plan-shell">
+      <section className="hero">
+        <div className="hero-topline">
+          <p className="eyebrow">{t.eyebrow}</p>
+          {hasSavedPlan && (
+            <button className="change-plan-button" onClick={openSetupForm} type="button">
+              {t.changeData}
+            </button>
+          )}
         </div>
+        <h1 className="hero-title">Last Chance</h1>
+        <p className="hero-subtitle">{t.subtitle}</p>
       </section>
 
-      {result.kind === "carbCycling" && (
-        <section className="card">
-          <div className="card-title">{t.weeklyCheck}</div>
-          <WeeklyCalorieCheck result={result} labels={t} />
-        </section>
+      {hasSavedPlan && (
+        <>
+          <section className="card accent-card plan-result-card">
+            <div className="plan-result-banner">
+              <div>
+                <div className="card-title">{t.result}</div>
+                <h2>{t.readyTitle}</h2>
+                <p>{t.readyDetail}</p>
+              </div>
+              <span>{t.readyBadge}</span>
+            </div>
+            {result.kind === "standard" ? (
+              <MacroGrid data={result.daily} labels={t} />
+            ) : (
+              <div className="cycle-stack">
+                <MacroBlock title={t.high} data={result.highDay} labels={t} />
+                <MacroBlock title={t.medium} data={result.mediumDay} labels={t} />
+                <MacroBlock title={t.low} data={result.lowDay} labels={t} />
+              </div>
+            )}
+            <div className="summary-line">
+              <span>RMR {result.rmr} kcal</span>
+              <span>TDEE {result.tdee} kcal</span>
+              <span>{t.expectedLoss} {result.weeklyLossKg} kg/week</span>
+            </div>
+          </section>
+
+          <section className="card plan-home-status-card">
+            <div className="card-title">{t.status}</div>
+            <TimelineRiskPanel risk={timelineRisk} />
+          </section>
+
+          <section className="card">
+            <div className="card-title">{t.projection}</div>
+            <div className="projection-table">
+              {projection.map((row) => (
+                <div className="projection-row" key={row.week}>
+                  <span>{t.week} {row.week}</span>
+                  <strong>{row.weightKg.toFixed(2)} kg</strong>
+                </div>
+              ))}
+            </div>
+            <p className="small-note">{t.projectionNote}</p>
+          </section>
+
+          <section className="card">
+            <div className="card-title">{t.execution}</div>
+            <p className="small-note">{sex === "female" ? t.femaleRules : result.kind === "carbCycling" ? t.carbRules : t.standardRules}</p>
+          </section>
+
+          {result.warnings.length > 0 && (
+            <section className="card">
+              <div className="card-title">{t.safety}</div>
+              {result.warnings.map((warning) => <div className="warning" key={warning}>{warning}</div>)}
+            </section>
+          )}
+        </>
       )}
 
-      <section className="card">
-        <div className="card-title">{t.projection}</div>
-        <div className="projection-table">
-          {projection.map((row) => (
-            <div className="projection-row" key={row.week}>
-              <span>{t.week} {row.week}</span>
-              <strong>{row.weightKg.toFixed(2)} kg</strong>
-            </div>
-          ))}
-        </div>
-        <p className="small-note">{t.projectionNote}</p>
-      </section>
-
-      {result.kind === "carbCycling" && <CarbCyclingWeeklyStructure result={result} labels={t} />}
-
-      <section className="card">
-        <div className="card-title">{t.execution}</div>
-        <p className="small-note">{sex === "female" ? t.femaleRules : result.kind === "carbCycling" ? t.carbRules : t.standardRules}</p>
-      </section>
-
-      {result.warnings.length > 0 && (
-        <section className="card">
-          <div className="card-title">{t.safety}</div>
-          {result.warnings.map((warning) => <div className="warning" key={warning}>{warning}</div>)}
+      {setupOpen && (
+        <section className={`plan-sheet-overlay plan-sheet-${setupStage}`} role="dialog" aria-modal="true" aria-label={setupStage === "intro" ? t.buildFirst : t.setupHeader}>
+          {hasSavedPlan && <button className="plan-sheet-backdrop" type="button" aria-label={t.close} onClick={() => setSetupOpen(false)} />}
+          <div className="plan-sheet-modal">
+            {setupStage === "intro" ? (
+              <div className="plan-sheet-intro">
+                <div className="card plan-start-card">
+                  <div className="card-title">{t.result}</div>
+                  <h2>{t.buildFirst}</h2>
+                  <p>{t.buildFirstDetail}</p>
+                  <div className="setup-step-grid">
+                    <span>{t.stepBody}</span>
+                    <span>{t.stepGoal}</span>
+                    <span>{t.stepTimeline}</span>
+                  </div>
+                  <button className="primary-button plan-start-button" onClick={() => setSetupStage("form")} type="button">{t.startSetup}</button>
+                </div>
+              </div>
+            ) : (
+              <div className="plan-sheet-form">
+                <div className="plan-sheet-head">
+                  <div>
+                    <div className="card-title">{t.setupHeader}</div>
+                    <strong>{t.setupHeader}</strong>
+                    <span>{t.setupSubhead}</span>
+                  </div>
+                  {hasSavedPlan && <button type="button" onClick={() => setSetupOpen(false)}>{t.close}</button>}
+                </div>
+                <div className="plan-setup-progress" aria-hidden="true">
+                  <span>{t.sex}</span>
+                  <span>{t.plan}</span>
+                  <span>{t.bodyData}</span>
+                </div>
+                <div className="plan-sheet-body">
+                  {setupForm}
+                </div>
+                <div className="plan-sheet-footer">
+                  <button className="change-plan-button plan-setup-save-button" disabled={timelineRisk.blocked} onClick={handleSave} type="button">
+                    {timelineRisk.blocked ? t.adjustTimeline : saved ? t.savedLocal : t.saveLocal}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </section>
       )}
     </main>
