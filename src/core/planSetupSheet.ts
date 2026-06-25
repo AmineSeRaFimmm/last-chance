@@ -126,8 +126,8 @@ function syncHero(shell: HTMLElement): void {
   const original = originalSave(shell);
   if (original) original.hidden = true;
 
-  let change = top.querySelector("[data-plan-open]");
-  if (!(change instanceof HTMLButtonElement)) {
+  let change = top.querySelector<HTMLButtonElement>("[data-plan-open]");
+  if (!change) {
     change = document.createElement("button");
     change.type = "button";
     change.className = "change-plan-button plan-change-data-button";
