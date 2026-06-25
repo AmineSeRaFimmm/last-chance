@@ -1,0 +1,176 @@
+:root {
+  --motion-fast: 120ms;
+  --motion-normal: 180ms;
+  --motion-slow: 260ms;
+  --motion-exit: 220ms;
+  --ease-ios: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-press: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.motion-layer {
+  isolation: isolate;
+}
+
+.motion-backdrop,
+.motion-surface {
+  will-change: opacity, transform, filter, backdrop-filter;
+}
+
+.motion-backdrop {
+  opacity: 1;
+  transition: opacity var(--motion-normal) var(--ease-ios), backdrop-filter var(--motion-normal) var(--ease-ios);
+}
+
+.motion-surface {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+  transform-origin: center;
+  transition: opacity var(--motion-slow) var(--ease-ios), transform var(--motion-slow) var(--ease-ios), border-radius var(--motion-slow) var(--ease-ios);
+}
+
+.motion-layer[data-motion-state="enter"] .motion-backdrop,
+.motion-layer[data-motion-state="exit"] .motion-backdrop {
+  opacity: 0;
+}
+
+.motion-center[data-motion-state="enter"] .motion-surface,
+.motion-center[data-motion-state="exit"] .motion-surface {
+  opacity: 0;
+  transform: translate3d(0, 10px, 0) scale(0.96);
+}
+
+.motion-sheet.workout-selector-overlay {
+  place-items: end center;
+}
+
+.motion-sheet[data-motion-state="enter"] .motion-surface,
+.motion-sheet[data-motion-state="exit"] .motion-surface {
+  opacity: 0;
+  transform: translate3d(0, 28px, 0) scale(0.985);
+}
+
+.motion-fullscreen-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+}
+
+.motion-fullscreen-sheet[data-motion-state="enter"],
+.motion-fullscreen-sheet[data-motion-state="exit"] {
+  opacity: 0;
+  transform: translate3d(0, 20px, 0) scale(0.99);
+}
+
+.motion-fullscreen-sheet {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+  transition: opacity var(--motion-slow) var(--ease-ios), transform var(--motion-slow) var(--ease-ios);
+}
+
+.motion-immersive[data-motion-state="enter"],
+.motion-immersive[data-motion-state="exit"] {
+  opacity: 0;
+}
+
+.motion-immersive {
+  opacity: 1;
+  transition: opacity var(--motion-normal) var(--ease-ios);
+}
+
+.workout-selector-modal::before {
+  content: "";
+  justify-self: center;
+  width: 42px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(60, 60, 67, 0.22);
+  margin: -4px 0 2px;
+}
+
+.workout-gif-modal[data-flip-origin="true"] {
+  --flip-x: 0px;
+  --flip-y: 0px;
+  --flip-scale-x: 0.25;
+  --flip-scale-y: 0.25;
+}
+
+.workout-gif-modal[data-flip-origin="true"][data-motion-state="enter"],
+.workout-gif-modal[data-flip-origin="true"][data-motion-state="exit"] {
+  opacity: 0.72;
+  border-radius: 18px;
+  transform: translate3d(var(--flip-x), var(--flip-y), 0) scale(var(--flip-scale-x), var(--flip-scale-y));
+}
+
+.primary-button,
+.secondary-button,
+.change-plan-button,
+.bottom-nav button,
+.segmented button,
+.language-toggle button,
+.program-option,
+.exercise-gif-button,
+.workout-selector-head button,
+.custom-builder-back,
+.custom-builder-done,
+.custom-builder-tabs button,
+.meal-composer-actions button,
+.log-row button {
+  transition: transform var(--motion-fast) var(--ease-press), opacity var(--motion-fast) var(--ease-press), filter var(--motion-fast) var(--ease-press), box-shadow var(--motion-fast) var(--ease-press);
+}
+
+.primary-button:active:not(:disabled),
+.secondary-button:active:not(:disabled),
+.change-plan-button:active:not(:disabled),
+.bottom-nav button:active:not(:disabled),
+.segmented button:active:not(:disabled),
+.language-toggle button:active:not(:disabled),
+.workout-selector-head button:active:not(:disabled),
+.custom-builder-back:active:not(:disabled),
+.custom-builder-done:active:not(:disabled),
+.custom-builder-tabs button:active:not(:disabled),
+.meal-composer-actions button:active:not(:disabled),
+.log-row button:active:not(:disabled) {
+  transform: scale(0.985);
+}
+
+.program-option:active:not(:disabled) {
+  transform: translateY(1px) scale(0.99);
+}
+
+.exercise-gif-button:active:not(:disabled) {
+  transform: scale(0.975);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-backdrop,
+  .motion-surface,
+  .motion-fullscreen-sheet,
+  .motion-immersive,
+  .primary-button,
+  .secondary-button,
+  .change-plan-button,
+  .bottom-nav button,
+  .segmented button,
+  .language-toggle button,
+  .program-option,
+  .exercise-gif-button,
+  .workout-selector-head button,
+  .custom-builder-back,
+  .custom-builder-done,
+  .custom-builder-tabs button,
+  .meal-composer-actions button,
+  .log-row button {
+    transition-duration: 1ms !important;
+  }
+
+  .motion-center[data-motion-state="enter"] .motion-surface,
+  .motion-center[data-motion-state="exit"] .motion-surface,
+  .motion-sheet[data-motion-state="enter"] .motion-surface,
+  .motion-sheet[data-motion-state="exit"] .motion-surface,
+  .motion-fullscreen-sheet[data-motion-state="enter"],
+  .motion-fullscreen-sheet[data-motion-state="exit"],
+  .workout-gif-modal[data-flip-origin="true"][data-motion-state="enter"],
+  .workout-gif-modal[data-flip-origin="true"][data-motion-state="exit"] {
+    transform: none !important;
+  }
+}
