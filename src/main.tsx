@@ -14,6 +14,7 @@ import "./styles/timeline.css";
 import "./styles/weekly-structure.css";
 import "./styles/motion.css";
 import "./styles/plan-home.css";
+import "./styles/plan-setup-polish.css";
 import "./core/interactionMotion";
 
 installNumericInputGuard();
