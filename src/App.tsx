@@ -17,6 +17,7 @@ const DEFAULT_TIMELINE_WEEKS = 12;
 const MIN_TIMELINE_WEEKS = 1;
 const MAX_TIMELINE_WEEKS = 156;
 const HARD_TIMELINE_LIMIT_RATE = 0.02;
+const SAVE_MORPH_MS = 520;
 
 interface TimelineRisk {
   status: TimelineStatus;
@@ -237,6 +238,7 @@ export default function App() {
   const [trainingDaysPerWeek, setTrainingDaysPerWeek] = useState(savedInput?.trainingDaysPerWeek ?? 4);
   const [proteinFactor, setProteinFactor] = useState(savedInput?.proteinFactor ?? DEFAULT_INPUTS.male.proteinFactor);
   const [saved, setSaved] = useState(false);
+  const [isSavingPlan, setIsSavingPlan] = useState(false);
   const [hasSavedPlan, setHasSavedPlan] = useState(Boolean(savedInput));
   const [setupOpen, setSetupOpen] = useState(!savedInput);
   const [setupStage, setSetupStage] = useState<SetupStage>(savedInput ? "plan" : "intro");
@@ -288,12 +290,16 @@ export default function App() {
   }
 
   function handleSave() {
-    if (timelineRisk.blocked) return;
+    if (timelineRisk.blocked || isSavingPlan) return;
     saveInput(input);
     setSaved(true);
-    setHasSavedPlan(true);
-    setSetupStage("plan");
-    setSetupOpen(false);
+    setIsSavingPlan(true);
+    window.setTimeout(() => {
+      setHasSavedPlan(true);
+      setSetupStage("plan");
+      setSetupOpen(false);
+      setIsSavingPlan(false);
+    }, SAVE_MORPH_MS);
   }
 
   function openSetupForm() {
@@ -302,7 +308,7 @@ export default function App() {
   }
 
   const setupPlanStep = (
-    <div className="setup-step-pane">
+    <div className="setup-step-pane" key="plan-step">
       <div className="setup-step-copy">
         <strong>{t.stepPlanTitle}</strong>
         <span>{t.stepPlanDetail}</span>
@@ -336,7 +342,7 @@ export default function App() {
   );
 
   const setupBodyStep = (
-    <div className="setup-step-pane">
+    <div className="setup-step-pane" key="body-step">
       <div className="setup-step-copy">
         <strong>{t.stepBodyTitle}</strong>
         <span>{t.stepBodyDetail}</span>
@@ -358,7 +364,7 @@ export default function App() {
   );
 
   const setupReviewStep = (
-    <div className="setup-step-pane">
+    <div className="setup-step-pane" key="review-step">
       <div className="setup-step-copy">
         <strong>{t.stepReviewTitle}</strong>
         <span>{t.stepReviewDetail}</span>
@@ -398,8 +404,8 @@ export default function App() {
       </section>
 
       {hasSavedPlan && (
-        <>
-          <section className="card accent-card plan-target-card">
+        <div className="plan-dashboard-stack">
+          <section className="card accent-card plan-target-card dashboard-reveal reveal-1">
             <div className="plan-result-banner">
               <div>
                 <div className="card-title">{t.coreTarget}</div>
@@ -415,7 +421,7 @@ export default function App() {
             </div>
           </section>
 
-          <section className="card accent-card plan-result-card">
+          <section className="card accent-card plan-result-card dashboard-reveal reveal-2">
             <div className="card-title">{t.result}</div>
             {result.kind === "standard" ? (
               <MacroGrid data={result.daily} labels={t} />
@@ -433,12 +439,12 @@ export default function App() {
             </div>
           </section>
 
-          <section className="card plan-home-status-card">
+          <section className="card plan-home-status-card dashboard-reveal reveal-3">
             <div className="card-title">{t.status}</div>
             <TimelineRiskPanel risk={timelineRisk} />
           </section>
 
-          <section className="card">
+          <section className="card dashboard-reveal reveal-4">
             <div className="card-title">{t.projection}</div>
             <div className="projection-table">
               {projection.map((row) => (
@@ -451,22 +457,22 @@ export default function App() {
             <p className="small-note">{t.projectionNote}</p>
           </section>
 
-          <section className="card">
+          <section className="card dashboard-reveal reveal-5">
             <div className="card-title">{t.execution}</div>
             <p className="small-note">{sex === "female" ? t.femaleRules : result.kind === "carbCycling" ? t.carbRules : t.standardRules}</p>
           </section>
 
           {result.warnings.length > 0 && (
-            <section className="card">
+            <section className="card dashboard-reveal reveal-6">
               <div className="card-title">{t.safety}</div>
               {result.warnings.map((warning) => <div className="warning" key={warning}>{warning}</div>)}
             </section>
           )}
-        </>
+        </div>
       )}
 
       {setupOpen && (
-        <section className={`plan-sheet-overlay plan-sheet-${setupStage}`} role="dialog" aria-modal="true" aria-label={setupStage === "intro" ? t.buildFirst : t.setupHeader}>
+        <section className={`plan-sheet-overlay plan-sheet-${setupStage} ${isSavingPlan ? "plan-save-morphing" : ""}`} role="dialog" aria-modal="true" aria-label={setupStage === "intro" ? t.buildFirst : t.setupHeader}>
           {hasSavedPlan && <button className="plan-sheet-backdrop" type="button" aria-label={t.close} onClick={() => setSetupOpen(false)} />}
           <div className="plan-sheet-modal">
             {setupStage === "intro" ? (
@@ -483,7 +489,7 @@ export default function App() {
                 </div>
               </div>
             ) : (
-              <div className="plan-sheet-form">
+              <div className={`plan-sheet-form stage-${setupStage}`}>
                 <div className="plan-sheet-head compact">
                   <div>
                     <strong>{t.setupHeader}</strong>
@@ -496,16 +502,16 @@ export default function App() {
                   <span className={setupStepIndex >= 2 ? "active" : ""} />
                   <span className={setupStepIndex >= 3 ? "active" : ""} />
                 </div>
-                <div className="plan-sheet-body">
+                <div className="plan-sheet-body stage-transition-shell">
                   {setupStage === "plan" && setupPlanStep}
                   {setupStage === "body" && setupBodyStep}
                   {setupStage === "review" && setupReviewStep}
                 </div>
                 <div className="plan-sheet-footer staged-footer">
-                  {setupStage !== "plan" && <button className="setup-secondary-button" type="button" onClick={() => setSetupStage(setupStage === "review" ? "body" : "plan")}>{t.back}</button>}
+                  {setupStage !== "plan" && <button className="setup-secondary-button" type="button" disabled={isSavingPlan} onClick={() => setSetupStage(setupStage === "review" ? "body" : "plan")}>{t.back}</button>}
                   {setupStage === "plan" && <button className="change-plan-button plan-setup-save-button" type="button" onClick={() => setSetupStage("body")}>{t.next}</button>}
                   {setupStage === "body" && <button className="change-plan-button plan-setup-save-button" type="button" onClick={() => setSetupStage("review")}>{t.review}</button>}
-                  {setupStage === "review" && <button className="change-plan-button plan-setup-save-button" disabled={timelineRisk.blocked} onClick={handleSave} type="button">{timelineRisk.blocked ? t.adjustTimeline : saved ? t.savedLocal : t.saveAndView}</button>}
+                  {setupStage === "review" && <button className={`change-plan-button plan-setup-save-button save-morph-button ${isSavingPlan ? "saving" : ""}`} disabled={timelineRisk.blocked || isSavingPlan} onClick={handleSave} type="button">{isSavingPlan ? t.savedLocal : timelineRisk.blocked ? t.adjustTimeline : saved ? t.savedLocal : t.saveAndView}</button>}
                 </div>
               </div>
             )}
