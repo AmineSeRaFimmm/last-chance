@@ -24,7 +24,8 @@
 .motion-surface {
   opacity: 1;
   transform: translate3d(0, 0, 0) scale(1);
-  transform-origin: center;
+  transform-origin: center center;
+  backface-visibility: hidden;
   transition: opacity var(--motion-slow) var(--ease-ios), transform var(--motion-slow) var(--ease-ios), border-radius var(--motion-slow) var(--ease-ios);
 }
 
@@ -84,6 +85,18 @@
   margin: -4px 0 2px;
 }
 
+.workout-gif-modal,
+.custom-builder-gif-modal {
+  contain: paint;
+  transform-origin: center center;
+}
+
+.workout-gif-frame,
+.workout-gif-frame img {
+  backface-visibility: hidden;
+  transform: translate3d(0, 0, 0);
+}
+
 .workout-gif-modal[data-flip-origin="true"],
 .custom-builder-gif-modal[data-flip-origin="true"] {
   --flip-x: 0px;
@@ -96,7 +109,7 @@
 .workout-gif-modal[data-flip-origin="true"][data-motion-state="exit"],
 .custom-builder-gif-modal[data-flip-origin="true"][data-motion-state="enter"],
 .custom-builder-gif-modal[data-flip-origin="true"][data-motion-state="exit"] {
-  opacity: 0.72;
+  opacity: 0.82;
   border-radius: 18px;
   transform: translate3d(var(--flip-x), var(--flip-y), 0) scale(var(--flip-scale-x), var(--flip-scale-y));
 }
