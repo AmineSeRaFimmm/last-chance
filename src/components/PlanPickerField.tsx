@@ -70,7 +70,7 @@ export function OptionalPlanPickerField({ value, defaultValue, setLabel, clearLa
 
   return (
     <div className="optional-picker-field">
-      <PlanPickerField {...props} value={value} onChange={onChange} />
+      <PlanPickerField {...props} value={value} onChange={(nextValue) => onChange(nextValue)} />
       <button className="picker-clear-button" type="button" onClick={() => onChange(undefined)}>{clearLabel}</button>
     </div>
   );
