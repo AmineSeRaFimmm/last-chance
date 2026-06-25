@@ -1,5 +1,6 @@
 const EXIT_DURATION_MS = 220;
 const OVERLAY_SELECTOR = ".workout-gif-overlay, .workout-selector-overlay, .custom-workout-builder-overlay, .custom-builder-gif-overlay, .meal-composer-overlay";
+const SCROLL_LOCK_OVERLAY_SELECTOR = ".workout-gif-overlay, .workout-selector-overlay, .custom-workout-builder-overlay, .custom-builder-gif-overlay";
 const CLOSE_TRIGGER_SELECTOR = [
   ".workout-gif-backdrop",
   ".custom-builder-gif-backdrop",
@@ -12,15 +13,23 @@ const CLOSE_TRIGGER_SELECTOR = [
   ".meal-composer-actions .primary-button:not(:disabled)"
 ].join(", ");
 
+interface ScrollLockSnapshot {
+  overflow: string;
+  touchAction: string;
+  overscrollBehavior: string;
+}
+
 let started = false;
 let lastGifOrigin: DOMRect | null = null;
-let scrollLockSnapshot: { overflow: string; touchAction: string; overscrollBehavior: string } | null = null;
+let scrollLockSnapshot: ScrollLockSnapshot | null = null;
+let startupScrollStyle: ScrollLockSnapshot | null = null;
 
 startInteractionMotion();
 
 function startInteractionMotion(): void {
   if (started || typeof window === "undefined" || typeof document === "undefined") return;
   started = true;
+  startupScrollStyle = readScrollStyle();
 
   document.addEventListener("pointerdown", rememberGifOrigin, true);
   document.addEventListener("click", interceptCloseClick, true);
@@ -31,7 +40,10 @@ function startInteractionMotion(): void {
   });
 
   observer.observe(document.body, { childList: true, subtree: true });
-  window.requestAnimationFrame(enhanceMotionLayers);
+  window.requestAnimationFrame(() => {
+    enhanceMotionLayers();
+    updateScrollLock();
+  });
 }
 
 function rememberGifOrigin(event: Event): void {
@@ -60,12 +72,17 @@ function interceptCloseClick(event: MouseEvent): void {
   event.stopPropagation();
   event.stopImmediatePropagation();
 
+  if (overlay.classList.contains("workout-gif-overlay") || overlay.classList.contains("custom-builder-gif-overlay")) {
+    refreshGifFlip(overlay);
+  }
+
   setLayerState(overlay, "exit");
 
   window.setTimeout(() => {
     trigger.dataset.motionReplay = "true";
     trigger.click();
     window.setTimeout(() => delete trigger.dataset.motionReplay, 0);
+    scheduleScrollUnlockCheck();
   }, EXIT_DURATION_MS);
 }
 
@@ -88,6 +105,7 @@ function enhanceMotionLayers(): void {
       if (modal instanceof HTMLElement) {
         modal.classList.add("motion-surface");
         applyGifFlip(modal);
+        stabilizeGifFlipAfterMediaLoad(modal);
       }
     } else if (node.classList.contains("custom-workout-builder-overlay")) {
       node.classList.add("motion-fullscreen-sheet");
@@ -107,6 +125,11 @@ function addMotionClass(root: HTMLElement, selector: string, className: string):
   if (element instanceof HTMLElement) element.classList.add(className);
 }
 
+function refreshGifFlip(overlay: HTMLElement): void {
+  const modal = overlay.querySelector(".workout-gif-modal, .custom-builder-gif-modal");
+  if (modal instanceof HTMLElement) applyGifFlip(modal);
+}
+
 function applyGifFlip(modal: HTMLElement): void {
   if (!lastGifOrigin) {
     modal.dataset.flipOrigin = "false";
@@ -114,6 +137,11 @@ function applyGifFlip(modal: HTMLElement): void {
   }
 
   const modalRect = modal.getBoundingClientRect();
+  if (modalRect.width <= 1 || modalRect.height <= 1) {
+    modal.dataset.flipOrigin = "false";
+    return;
+  }
+
   const originCenterX = lastGifOrigin.left + lastGifOrigin.width / 2;
   const originCenterY = lastGifOrigin.top + lastGifOrigin.height / 2;
   const modalCenterX = modalRect.left + modalRect.width / 2;
@@ -126,6 +154,20 @@ function applyGifFlip(modal: HTMLElement): void {
   modal.dataset.flipOrigin = "true";
 }
 
+function stabilizeGifFlipAfterMediaLoad(modal: HTMLElement): void {
+  const image = modal.querySelector("img");
+  if (!(image instanceof HTMLImageElement)) return;
+
+  if (image.complete && image.naturalWidth > 0) {
+    window.requestAnimationFrame(() => applyGifFlip(modal));
+    return;
+  }
+
+  image.addEventListener("load", () => {
+    window.requestAnimationFrame(() => applyGifFlip(modal));
+  }, { once: true });
+}
+
 function setLayerState(layer: HTMLElement, state: "enter" | "open" | "exit"): void {
   layer.dataset.motionState = state;
   layer.querySelectorAll(".motion-surface").forEach((surface) => {
@@ -134,26 +176,55 @@ function setLayerState(layer: HTMLElement, state: "enter" | "open" | "exit"): vo
 }
 
 function updateScrollLock(): void {
-  const hasOverlay = Boolean(document.querySelector(OVERLAY_SELECTOR));
+  const hasLockingOverlay = Boolean(document.querySelector(SCROLL_LOCK_OVERLAY_SELECTOR));
 
-  if (hasOverlay && !scrollLockSnapshot) {
-    scrollLockSnapshot = {
-      overflow: document.body.style.overflow,
-      touchAction: document.body.style.touchAction,
-      overscrollBehavior: document.documentElement.style.overscrollBehavior
-    };
-    document.body.style.overflow = "hidden";
-    document.body.style.touchAction = "none";
-    document.documentElement.style.overscrollBehavior = "none";
+  if (hasLockingOverlay && !scrollLockSnapshot) {
+    scrollLockSnapshot = normalizeSnapshot(readScrollStyle());
+    writeScrollStyle({ overflow: "hidden", touchAction: "none", overscrollBehavior: "none" });
     return;
   }
 
-  if (!hasOverlay && scrollLockSnapshot) {
-    document.body.style.overflow = scrollLockSnapshot.overflow;
-    document.body.style.touchAction = scrollLockSnapshot.touchAction;
-    document.documentElement.style.overscrollBehavior = scrollLockSnapshot.overscrollBehavior;
+  if (!hasLockingOverlay && scrollLockSnapshot) {
+    writeScrollStyle(scrollLockSnapshot);
     scrollLockSnapshot = null;
   }
+
+  if (!document.querySelector(OVERLAY_SELECTOR)) forceUnlockIfMotionLeftPageLocked();
+}
+
+function scheduleScrollUnlockCheck(): void {
+  window.requestAnimationFrame(updateScrollLock);
+  window.setTimeout(updateScrollLock, 0);
+  window.setTimeout(updateScrollLock, EXIT_DURATION_MS + 32);
+}
+
+function forceUnlockIfMotionLeftPageLocked(): void {
+  if (scrollLockSnapshot) return;
+  const current = readScrollStyle();
+  if (current.overflow !== "hidden" && current.touchAction !== "none" && current.overscrollBehavior !== "none") return;
+  writeScrollStyle(startupScrollStyle ?? { overflow: "", touchAction: "", overscrollBehavior: "" });
+}
+
+function normalizeSnapshot(snapshot: ScrollLockSnapshot): ScrollLockSnapshot {
+  if (snapshot.overflow === "hidden" && snapshot.touchAction === "none" && snapshot.overscrollBehavior === "none") {
+    return startupScrollStyle ?? { overflow: "", touchAction: "", overscrollBehavior: "" };
+  }
+
+  return snapshot;
+}
+
+function readScrollStyle(): ScrollLockSnapshot {
+  return {
+    overflow: document.body.style.overflow,
+    touchAction: document.body.style.touchAction,
+    overscrollBehavior: document.documentElement.style.overscrollBehavior
+  };
+}
+
+function writeScrollStyle(style: ScrollLockSnapshot): void {
+  document.body.style.overflow = style.overflow;
+  document.body.style.touchAction = style.touchAction;
+  document.documentElement.style.overscrollBehavior = style.overscrollBehavior;
 }
 
 export {};
