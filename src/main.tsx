@@ -15,7 +15,7 @@ import "./styles/weekly-structure.css";
 import "./styles/motion.css";
 import "./styles/plan-home.css";
 import "./core/interactionMotion";
-import "./core/planSetupSheet";
+import "./core/planSetupSheetStable";
 
 installNumericInputGuard();
 installProjectionWheel();
