@@ -115,11 +115,11 @@ function enhanceMotionLayers(): void {
     setLayerState(node, "enter");
 
     if (motionModel === "bottomSheet") {
-      node.classList.add("motion-layer", "motion-bottom-sheet");
+      node.classList.add("motion-layer", "motion-sheet", "motion-bottom-sheet");
       addMotionClass(node, ".workout-selector-backdrop", "motion-backdrop");
       addMotionClass(node, ".workout-selector-modal", "motion-surface");
     } else if (motionModel === "centerMedia") {
-      node.classList.add("motion-layer", "motion-center-media");
+      node.classList.add("motion-layer", "motion-center", "motion-center-media");
       addMotionClass(node, ".workout-gif-backdrop, .custom-builder-gif-backdrop", "motion-backdrop");
       const modal = node.querySelector(".workout-gif-modal, .custom-builder-gif-modal");
       if (modal instanceof HTMLElement) {
@@ -128,9 +128,9 @@ function enhanceMotionLayers(): void {
         stabilizeGifFlipAfterMediaLoad(modal);
       }
     } else if (motionModel === "fullScreenSheet") {
-      node.classList.add("motion-layer", "motion-full-screen-sheet");
+      node.classList.add("motion-layer", "motion-fullscreen-sheet", "motion-full-screen-sheet");
     } else if (motionModel === "immersiveEditor") {
-      node.classList.add("motion-layer", "motion-immersive-editor");
+      node.classList.add("motion-layer", "motion-immersive", "motion-immersive-editor");
       addMotionClass(node, ".meal-composer-backdrop", "motion-backdrop");
     }
 
