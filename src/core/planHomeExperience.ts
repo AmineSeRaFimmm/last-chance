@@ -1,7 +1,5 @@
 const STORAGE_KEY = "last_chance_last_input";
 const LANGUAGE_KEY = "last_chance_language";
-const STARTED_KEY = "last_chance_plan_started";
-const DRAFT_KEY = "last_chance_plan_draft";
 const GENERATED_ATTR = "data-plan-generated-section";
 
 const copy = {
@@ -40,6 +38,8 @@ const copy = {
 } as const;
 
 let started = false;
+let planStartedThisPage = false;
+let planDraftThisPage = false;
 
 startPlanHomeExperience();
 
@@ -81,8 +81,8 @@ function handlePlanClick(event: MouseEvent): void {
   if (saveButton instanceof HTMLButtonElement && !saveButton.disabled) {
     window.setTimeout(() => {
       if (hasStoredPlan()) {
-        window.sessionStorage.setItem(STARTED_KEY, "true");
-        window.sessionStorage.removeItem(DRAFT_KEY);
+        planStartedThisPage = true;
+        planDraftThisPage = false;
         refreshPlanHome();
       }
     }, 0);
@@ -99,8 +99,8 @@ function handlePlanInput(event: Event): void {
 }
 
 function markStarted(isDraft: boolean): void {
-  window.sessionStorage.setItem(STARTED_KEY, "true");
-  if (isDraft) window.sessionStorage.setItem(DRAFT_KEY, "true");
+  planStartedThisPage = true;
+  if (isDraft) planDraftThisPage = true;
 }
 
 function refreshPlanHome(): void {
@@ -111,9 +111,8 @@ function refreshPlanHome(): void {
   markGeneratedSections(shell);
 
   const stored = hasStoredPlan();
-  const draft = window.sessionStorage.getItem(DRAFT_KEY) === "true";
-  const active = stored || window.sessionStorage.getItem(STARTED_KEY) === "true";
-  const mode = active ? stored && !draft ? "saved" : "draft" : "start";
+  const active = stored || planStartedThisPage;
+  const mode = active ? stored && !planDraftThisPage ? "saved" : "draft" : "start";
 
   shell.classList.toggle("plan-home-start", mode === "start");
   shell.classList.toggle("plan-home-active", mode !== "start");
