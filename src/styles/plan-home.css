@@ -106,6 +106,8 @@
   display: grid;
   place-items: end center;
   padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+  background: rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(14px);
   animation: plan-overlay-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
@@ -113,8 +115,7 @@
   position: absolute;
   inset: 0;
   border: 0;
-  background: rgba(0, 0, 0, 0.28);
-  backdrop-filter: blur(14px);
+  background: transparent;
 }
 
 .plan-sheet-modal {
