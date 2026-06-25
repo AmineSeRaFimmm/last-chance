@@ -12,13 +12,18 @@ import "./styles/projection.css";
 import "./styles/diet.css";
 import "./styles/timeline.css";
 import "./styles/weekly-structure.css";
+import "./styles/motion.css";
 
 installNumericInputGuard();
 installProjectionWheel();
 startStartupGifPreload();
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <Root />
-  </React.StrictMode>
-);
+const rootElement = document.getElementById("root");
+
+if (rootElement) {
+  ReactDOM.createRoot(rootElement).render(
+    <React.StrictMode>
+      <Root />
+    </React.StrictMode>
+  );
+}
