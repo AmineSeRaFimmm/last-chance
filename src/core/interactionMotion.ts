@@ -1,6 +1,19 @@
 const EXIT_DURATION_MS = 220;
-const OVERLAY_SELECTOR = ".workout-gif-overlay, .workout-selector-overlay, .custom-workout-builder-overlay, .custom-builder-gif-overlay, .meal-composer-overlay";
-const SCROLL_LOCK_OVERLAY_SELECTOR = ".workout-gif-overlay, .workout-selector-overlay, .custom-workout-builder-overlay, .custom-builder-gif-overlay";
+const CENTER_MEDIA_OVERLAY_SELECTOR = ".workout-gif-overlay, .custom-builder-gif-overlay";
+const BOTTOM_SHEET_OVERLAY_SELECTOR = ".workout-selector-overlay";
+const FULL_SCREEN_SHEET_OVERLAY_SELECTOR = ".custom-workout-builder-overlay";
+const IMMERSIVE_EDITOR_OVERLAY_SELECTOR = ".meal-composer-overlay";
+const OVERLAY_SELECTOR = [
+  CENTER_MEDIA_OVERLAY_SELECTOR,
+  BOTTOM_SHEET_OVERLAY_SELECTOR,
+  FULL_SCREEN_SHEET_OVERLAY_SELECTOR,
+  IMMERSIVE_EDITOR_OVERLAY_SELECTOR
+].join(", ");
+const SCROLL_LOCK_OVERLAY_SELECTOR = [
+  CENTER_MEDIA_OVERLAY_SELECTOR,
+  BOTTOM_SHEET_OVERLAY_SELECTOR,
+  FULL_SCREEN_SHEET_OVERLAY_SELECTOR
+].join(", ");
 const CLOSE_TRIGGER_SELECTOR = [
   ".workout-gif-backdrop",
   ".custom-builder-gif-backdrop",
@@ -12,6 +25,8 @@ const CLOSE_TRIGGER_SELECTOR = [
   ".meal-composer-backdrop",
   ".meal-composer-actions .primary-button:not(:disabled)"
 ].join(", ");
+
+type OverlayMotionModel = "centerMedia" | "bottomSheet" | "fullScreenSheet" | "immersiveEditor";
 
 interface ScrollLockSnapshot {
   overflow: string;
@@ -66,15 +81,16 @@ function interceptCloseClick(event: MouseEvent): void {
   if (!(overlay instanceof HTMLElement)) return;
   if (overlay.dataset.motionState === "exit") return;
 
-  if (trigger.matches(".custom-builder-back") && overlay.querySelector(".custom-workout-builder-modal.is-editing")) return;
+  const motionModel = getOverlayMotionModel(overlay);
+  if (!motionModel) return;
+
+  if (motionModel === "fullScreenSheet" && trigger.matches(".custom-builder-back") && overlay.querySelector(".custom-workout-builder-modal.is-editing")) return;
 
   event.preventDefault();
   event.stopPropagation();
   event.stopImmediatePropagation();
 
-  if (overlay.classList.contains("workout-gif-overlay") || overlay.classList.contains("custom-builder-gif-overlay")) {
-    refreshGifFlip(overlay);
-  }
+  if (motionModel === "centerMedia") refreshGifFlip(overlay);
 
   setLayerState(overlay, "exit");
 
@@ -91,15 +107,19 @@ function enhanceMotionLayers(): void {
     if (!(node instanceof HTMLElement)) return;
     if (node.dataset.motionEnhanced === "true") return;
 
+    const motionModel = getOverlayMotionModel(node);
+    if (!motionModel) return;
+
     node.dataset.motionEnhanced = "true";
+    node.dataset.motionModel = motionModel;
     setLayerState(node, "enter");
 
-    if (node.classList.contains("workout-selector-overlay")) {
-      node.classList.add("motion-layer", "motion-sheet");
+    if (motionModel === "bottomSheet") {
+      node.classList.add("motion-layer", "motion-bottom-sheet");
       addMotionClass(node, ".workout-selector-backdrop", "motion-backdrop");
       addMotionClass(node, ".workout-selector-modal", "motion-surface");
-    } else if (node.classList.contains("workout-gif-overlay") || node.classList.contains("custom-builder-gif-overlay")) {
-      node.classList.add("motion-layer", "motion-center");
+    } else if (motionModel === "centerMedia") {
+      node.classList.add("motion-layer", "motion-center-media");
       addMotionClass(node, ".workout-gif-backdrop, .custom-builder-gif-backdrop", "motion-backdrop");
       const modal = node.querySelector(".workout-gif-modal, .custom-builder-gif-modal");
       if (modal instanceof HTMLElement) {
@@ -107,10 +127,10 @@ function enhanceMotionLayers(): void {
         applyGifFlip(modal);
         stabilizeGifFlipAfterMediaLoad(modal);
       }
-    } else if (node.classList.contains("custom-workout-builder-overlay")) {
-      node.classList.add("motion-fullscreen-sheet");
-    } else if (node.classList.contains("meal-composer-overlay")) {
-      node.classList.add("motion-layer", "motion-immersive");
+    } else if (motionModel === "fullScreenSheet") {
+      node.classList.add("motion-layer", "motion-full-screen-sheet");
+    } else if (motionModel === "immersiveEditor") {
+      node.classList.add("motion-layer", "motion-immersive-editor");
       addMotionClass(node, ".meal-composer-backdrop", "motion-backdrop");
     }
 
@@ -118,6 +138,14 @@ function enhanceMotionLayers(): void {
       window.requestAnimationFrame(() => setLayerState(node, "open"));
     });
   });
+}
+
+function getOverlayMotionModel(overlay: HTMLElement): OverlayMotionModel | null {
+  if (overlay.matches(CENTER_MEDIA_OVERLAY_SELECTOR)) return "centerMedia";
+  if (overlay.matches(BOTTOM_SHEET_OVERLAY_SELECTOR)) return "bottomSheet";
+  if (overlay.matches(FULL_SCREEN_SHEET_OVERLAY_SELECTOR)) return "fullScreenSheet";
+  if (overlay.matches(IMMERSIVE_EDITOR_OVERLAY_SELECTOR)) return "immersiveEditor";
+  return null;
 }
 
 function addMotionClass(root: HTMLElement, selector: string, className: string): void {
