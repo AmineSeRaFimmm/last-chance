@@ -68,7 +68,9 @@ export function DietPlanner() {
     return (
       <main className="app-shell diet-shell">
         <section className="hero diet-hero">
-          <p className="eyebrow">{t.title}</p>
+          <div className="hero-topline">
+            <p className="eyebrow">{t.title}</p>
+          </div>
           <h1 className="hero-title">Diet</h1>
           <p className="hero-subtitle">{t.subtitle}</p>
         </section>
@@ -125,7 +127,9 @@ export function DietPlanner() {
   return (
     <main className="app-shell diet-shell">
       <section className="hero diet-hero">
-        <p className="eyebrow">{t.title}</p>
+        <div className="hero-topline">
+          <p className="eyebrow">{t.title}</p>
+        </div>
         <h1 className="hero-title">Diet</h1>
         <p className="hero-subtitle">{t.subtitle}</p>
       </section>
