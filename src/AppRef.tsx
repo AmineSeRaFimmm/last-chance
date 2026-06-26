@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PlanChoiceCard } from "./components/PlanChoiceCard";
-import { OptionalPlanPickerField, PlanPickerField } from "./components/PlanPickerField";
+import { TuneNumbersStep } from "./components/TuneNumbersStep";
 import { buildSafeCarbCyclingPlan as buildCarbCyclingPlan } from "./core/carbCyclingSafePlan";
 import { ACTIVITY_LEVELS, DEFAULT_INPUTS } from "./core/constants";
 import { copy, type AppCopy, type Language } from "./core/appCopy";
@@ -157,22 +157,25 @@ export default function AppRef() {
   );
 
   const setupBodyStep = (
-    <div className="setup-step-pane" key="body-step">
-      <div className="setup-step-copy"><strong>{t.stepBodyTitle}</strong><span>{t.stepBodyDetail}</span></div>
-      <section className="card plan-body-data-card plan-settings-card">
-        <div className="card-title">{t.bodyData}</div>
-        <div className="picker-grid">
-          <PlanPickerField label={t.age} value={age} min={18} max={80} onChange={setAge} />
-          <PlanPickerField label={t.height} value={heightCm} min={130} max={230} suffix="cm" onChange={setHeightCm} />
-          <PlanPickerField label={t.weight} value={weightKg} min={35} max={250} step={0.1} suffix="kg" onChange={setWeightKg} />
-          <OptionalPlanPickerField label={t.target} value={targetWeightKg} defaultValue={Math.max(35, Math.min(250, Number((weightKg - 5).toFixed(1))))} min={35} max={250} step={0.1} suffix="kg" setLabel={language === "zh" ? "设置目标" : "Set target"} clearLabel={language === "zh" ? "清除" : "Clear"} emptyLabel={language === "zh" ? "未设置" : "Not set"} onChange={setTargetWeightKg} />
-          <PlanPickerField label={t.expectedTimeline} value={expectedTimelineWeeks} min={MIN_TIMELINE_WEEKS} max={MAX_TIMELINE_WEEKS} suffix="wk" onChange={setExpectedTimelineWeeks} />
-          <PlanPickerField label={t.trainingDays} value={trainingDaysPerWeek} min={0} max={6} suffix="/wk" onChange={setTrainingDaysPerWeek} />
-          <PlanPickerField label={t.protein} value={proteinFactor} min={1.4} max={2.4} step={0.1} suffix="g/kg" onChange={setProteinFactor} />
-        </div>
-        <TimelineRiskPanel risk={timelineRisk} />
-      </section>
-    </div>
+    <TuneNumbersStep
+      labels={t}
+      language={language}
+      weightKg={weightKg}
+      targetWeightKg={targetWeightKg}
+      expectedTimelineWeeks={expectedTimelineWeeks}
+      age={age}
+      heightCm={heightCm}
+      trainingDaysPerWeek={trainingDaysPerWeek}
+      proteinFactor={proteinFactor}
+      timelineRisk={timelineRisk}
+      onWeightChange={setWeightKg}
+      onTargetWeightChange={setTargetWeightKg}
+      onExpectedTimelineChange={setExpectedTimelineWeeks}
+      onAgeChange={setAge}
+      onHeightChange={setHeightCm}
+      onTrainingDaysChange={setTrainingDaysPerWeek}
+      onProteinChange={setProteinFactor}
+    />
   );
 
   const setupReviewStep = (
