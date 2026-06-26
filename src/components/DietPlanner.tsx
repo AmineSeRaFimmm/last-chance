@@ -70,6 +70,7 @@ export function DietPlanner() {
         <section className="hero diet-hero">
           <div className="hero-topline">
             <p className="eyebrow">{t.title}</p>
+            <DietHeroToplineSpacer />
           </div>
           <h1 className="hero-title">Diet</h1>
           <p className="hero-subtitle">{t.subtitle}</p>
@@ -129,6 +130,7 @@ export function DietPlanner() {
       <section className="hero diet-hero">
         <div className="hero-topline">
           <p className="eyebrow">{t.title}</p>
+          <DietHeroToplineSpacer />
         </div>
         <h1 className="hero-title">Diet</h1>
         <p className="hero-subtitle">{t.subtitle}</p>
@@ -168,6 +170,15 @@ export function DietPlanner() {
         />
       )}
     </main>
+  );
+}
+
+function DietHeroToplineSpacer() {
+  return (
+    <div className="language-toggle" aria-hidden="true" style={{ visibility: "hidden", pointerEvents: "none" }}>
+      <button type="button" tabIndex={-1}>EN</button>
+      <button type="button" tabIndex={-1}>中文</button>
+    </div>
   );
 }
 
