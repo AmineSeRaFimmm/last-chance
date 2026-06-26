@@ -1,3 +1,4 @@
+import type { CSSProperties, ReactNode } from "react";
 import type { AppCopy, Language } from "../core/appCopy";
 
 interface TimelineRiskView {
@@ -37,8 +38,6 @@ const copy = {
     clear: "Clear",
     recommended: "Recommended standard",
     apply: "Apply",
-    moreAggressive: "More aggressive",
-    moreConservative: "More conservative",
     tooShort: "Timeline too short",
     aggressive: "Aggressive range",
     standard: "Standard range",
@@ -57,8 +56,6 @@ const copy = {
     clear: "清除",
     recommended: "推荐标准周期",
     apply: "应用",
-    moreAggressive: "更激进",
-    moreConservative: "更保守",
     tooShort: "时间过短",
     aggressive: "激进区间",
     standard: "标准区间",
@@ -188,7 +185,7 @@ function TunePrimaryCard({
   step: number;
   emptyActionLabel?: string;
   trailingActionLabel?: string;
-  footer?: React.ReactNode;
+  footer?: ReactNode;
   onChange: (value: number) => void;
   onEmptyAction?: () => void;
   onTrailingAction?: () => void;
@@ -220,7 +217,7 @@ function TunePrimaryCard({
               max={max}
               step={step}
               value={value}
-              style={{ "--tune-progress": `${progressPercent(value, min, max)}%` } as React.CSSProperties}
+              style={{ "--tune-progress": `${progressPercent(value, min, max)}%` } as CSSProperties}
               onChange={(event) => onChange(clampNumber(Number(event.target.value), min, max, step))}
             />
             <div className="tune-slider-scale"><span>{formatNumber(min, step)}</span><span>{formatNumber(value, step)}</span><span>{formatNumber(max, step)}</span></div>
