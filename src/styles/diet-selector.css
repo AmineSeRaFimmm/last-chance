@@ -57,6 +57,17 @@
   margin: 0;
 }
 
+.diet-carousel-card .diet-day-head {
+  flex-direction: row;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.diet-carousel-card .diet-day-target {
+  justify-items: end;
+  text-align: right;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .diet-carousel-card {
     opacity: 1;
