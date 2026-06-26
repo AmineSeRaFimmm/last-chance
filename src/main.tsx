@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import Root from "./Root";
 import { installNumericInputGuard } from "./core/numericInputGuard";
+import { installPlanSetupScrollReset } from "./core/planSetupScrollReset";
 import { installProjectionWheel } from "./core/projectionWheel";
 import { startStartupGifPreload } from "./core/startupGifPreloader";
 import "./styles/global.css";
@@ -21,6 +22,7 @@ import "./styles/plan-stage-dashboard.css";
 import "./core/interactionMotion";
 
 installNumericInputGuard();
+installPlanSetupScrollReset();
 installProjectionWheel();
 startStartupGifPreload();
 
