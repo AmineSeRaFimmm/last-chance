@@ -28,14 +28,12 @@ interface TuneNumbersStepProps {
   onProteinChange: (value: number) => void;
 }
 
-const copy = {
+const tuneCopy = {
   en: {
     bodyData: "Body data",
     weight: "Weight",
     target: "Target",
     timeline: "Timeline",
-    recommended: "Recommended standard",
-    apply: "Apply",
     tooShort: "Timeline too short",
     aggressive: "Aggressive range",
     standard: "Standard range",
@@ -50,8 +48,6 @@ const copy = {
     weight: "体重",
     target: "目标",
     timeline: "周期",
-    recommended: "推荐标准周期",
-    apply: "应用",
     tooShort: "时间过短",
     aggressive: "激进区间",
     standard: "标准区间",
@@ -82,8 +78,7 @@ export function TuneNumbersStep({
   onTrainingDaysChange,
   onProteinChange
 }: TuneNumbersStepProps) {
-  const t = copy[language];
-  const recommendedTimeline = buildRecommendedStandardTimeline(weightKg, targetWeightKg);
+  const t = tuneCopy[language];
 
   return (
     <div className="setup-step-pane tune-numbers-pane" key="body-step">
@@ -91,49 +86,12 @@ export function TuneNumbersStep({
         <strong>{labels.stepBodyTitle}</strong>
         <span>{labels.stepBodyDetail}</span>
       </div>
-
       <section className="tune-numbers-stack" aria-label={t.bodyData}>
         <div className="tune-primary-stack">
-          <TunePrimaryCard
-            title={t.weight}
-            value={weightKg}
-            suffix="kg"
-            min={35}
-            max={170}
-            step={0.1}
-            onChange={onWeightChange}
-          />
-
-          <TunePrimaryCard
-            title={t.target}
-            value={targetWeightKg}
-            suffix="kg"
-            min={35}
-            max={170}
-            step={0.1}
-            onChange={onTargetWeightChange}
-          />
-
-          <TunePrimaryCard
-            title={t.timeline}
-            value={expectedTimelineWeeks}
-            suffix="weeks"
-            min={1}
-            max={86}
-            step={1}
-            onChange={onExpectedTimelineChange}
-            footer={
-              <TimelineRiskStrip
-                risk={timelineRisk}
-                labels={t}
-                recommendedTimeline={recommendedTimeline}
-                currentTimeline={expectedTimelineWeeks}
-                onApplyRecommended={() => onExpectedTimelineChange(recommendedTimeline)}
-              />
-            }
-          />
+          <TunePrimaryCard title={t.weight} value={weightKg} suffix="kg" min={35} max={170} step={0.1} onChange={onWeightChange} />
+          <TunePrimaryCard title={t.target} value={targetWeightKg} suffix="kg" min={35} max={170} step={0.1} onChange={onTargetWeightChange} />
+          <TunePrimaryCard title={t.timeline} value={expectedTimelineWeeks} suffix="weeks" min={1} max={86} step={1} onChange={onExpectedTimelineChange} footer={<TimelineRiskStrip risk={timelineRisk} labels={t} />} />
         </div>
-
         <div className="tune-secondary-grid" aria-label="Secondary body settings">
           <TuneCompactStepper title={t.age} value={age} suffix="years" min={14} max={65} step={1} onChange={onAgeChange} />
           <TuneCompactStepper title={t.height} value={heightCm} suffix="cm" min={130} max={230} step={1} onChange={onHeightChange} />
@@ -145,101 +103,44 @@ export function TuneNumbersStep({
   );
 }
 
-function TunePrimaryCard({
-  title,
-  value,
-  suffix,
-  min,
-  max,
-  step,
-  footer,
-  onChange
-}: {
-  title: string;
-  value: number;
-  suffix: string;
-  min: number;
-  max: number;
-  step: number;
-  footer?: ReactNode;
-  onChange: (value: number) => void;
-}) {
+function TunePrimaryCard({ title, value, suffix, min, max, step, footer, onChange }: { title: string; value: number; suffix: string; min: number; max: number; step: number; footer?: ReactNode; onChange: (value: number) => void }) {
   const safeValue = clampNumber(value, min, max, step);
   const displayValue = formatNumber(safeValue, step);
 
   return (
     <article className="tune-control-card tune-control-card-primary">
       <div className="tune-card-head">
-        <div>
-          <span className="tune-card-title">{title}</span>
-          <strong className="tune-card-value">{displayValue}<em>{suffix}</em></strong>
-        </div>
+        <span className="tune-card-title">{title}</span>
+        <strong className="tune-card-value">{displayValue}<em>{suffix}</em></strong>
       </div>
-
       <div className="tune-slider-row">
         <button className="tune-round-stepper" type="button" onClick={() => onChange(clampNumber(safeValue - step, min, max, step))}>−</button>
         <div className="tune-slider-shell">
-          <input
-            className="tune-premium-range"
-            type="range"
-            min={min}
-            max={max}
-            step={step}
-            value={safeValue}
-            style={{ "--tune-progress": `${progressPercent(safeValue, min, max)}%` } as CSSProperties}
-            onChange={(event) => onChange(clampNumber(Number(event.target.value), min, max, step))}
-          />
+          <input className="tune-premium-range" type="range" min={min} max={max} step={step} value={safeValue} style={{ "--tune-progress": `${progressPercent(safeValue, min, max)}%` } as CSSProperties} onChange={(event) => onChange(clampNumber(Number(event.target.value), min, max, step))} />
           <div className="tune-slider-scale"><span>{formatNumber(min, step)}</span><span>{displayValue}</span><span>{formatNumber(max, step)}</span></div>
         </div>
         <button className="tune-round-stepper" type="button" onClick={() => onChange(clampNumber(safeValue + step, min, max, step))}>+</button>
       </div>
-
       {footer}
     </article>
   );
 }
 
-function TimelineRiskStrip({
-  risk,
-  labels,
-  recommendedTimeline,
-  currentTimeline,
-  onApplyRecommended
-}: {
-  risk: TimelineRiskView;
-  labels: typeof copy.en | typeof copy.zh;
-  recommendedTimeline: number;
-  currentTimeline: number;
-  onApplyRecommended: () => void;
-}) {
+function TimelineRiskStrip({ risk, labels }: { risk: TimelineRiskView; labels: typeof tuneCopy.en | typeof tuneCopy.zh }) {
   const riskClass = risk.status === "blocked" ? "blocked" : risk.status === "aggressive" || risk.status === "high" ? "aggressive" : risk.status === "standard" ? "standard" : "safe";
-  const shouldShowApply = Number.isFinite(recommendedTimeline) && recommendedTimeline !== currentTimeline;
 
   return (
     <div className={`tune-risk-strip risk-${riskClass}`}>
       <div className="tune-risk-gradient" aria-hidden="true">
-        <span>{labels.tooShort}</span>
-        <span>{labels.aggressive}</span>
-        <span>{labels.standard}</span>
-        <span>{labels.conservative}</span>
-        <i />
+        <span>{labels.tooShort}</span><span>{labels.aggressive}</span><span>{labels.standard}</span><span>{labels.conservative}</span><i />
       </div>
-      <div className="tune-risk-copy">
-        <div>
-          <strong>{risk.title}</strong>
-          <span>{risk.detail}</span>
-        </div>
-        <button className="tune-recommend-pill" type="button" onClick={onApplyRecommended} disabled={!shouldShowApply}>
-          {labels.recommended}: {recommendedTimeline}w{shouldShowApply ? ` · ${labels.apply}` : ""}
-        </button>
-      </div>
+      <div className="tune-risk-copy"><strong>{risk.title}</strong><span>{risk.detail}</span></div>
     </div>
   );
 }
 
 function TuneCompactStepper({ title, value, suffix, min, max, step, onChange }: { title: string; value: number; suffix: string; min: number; max: number; step: number; onChange: (value: number) => void }) {
   const safeValue = clampNumber(value, min, max, step);
-
   return (
     <div className="tune-compact-stepper">
       <span>{title}</span>
@@ -250,13 +151,6 @@ function TuneCompactStepper({ title, value, suffix, min, max, step, onChange }: 
       </div>
     </div>
   );
-}
-
-function buildRecommendedStandardTimeline(currentWeightKg: number, targetWeightKg: number): number {
-  if (!Number.isFinite(currentWeightKg) || !Number.isFinite(targetWeightKg) || targetWeightKg >= currentWeightKg) return 12;
-  const totalLossKg = currentWeightKg - targetWeightKg;
-  const standardWeeklyRate = currentWeightKg * 0.0075;
-  return Math.min(86, Math.max(1, Math.ceil(totalLossKg / standardWeeklyRate)));
 }
 
 function clampNumber(value: number, min: number, max: number, step: number): number {
