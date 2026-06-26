@@ -12,7 +12,7 @@ interface TuneNumbersStepProps {
   labels: AppCopy;
   language: Language;
   weightKg: number;
-  targetWeightKg?: number;
+  targetWeightKg: number;
   expectedTimelineWeeks: number;
   age: number;
   heightCm: number;
@@ -20,7 +20,7 @@ interface TuneNumbersStepProps {
   proteinFactor: number;
   timelineRisk: TimelineRiskView;
   onWeightChange: (value: number) => void;
-  onTargetWeightChange: (value: number | undefined) => void;
+  onTargetWeightChange: (value: number) => void;
   onExpectedTimelineChange: (value: number) => void;
   onAgeChange: (value: number) => void;
   onHeightChange: (value: number) => void;
@@ -34,8 +34,6 @@ const copy = {
     weight: "Weight",
     target: "Target",
     timeline: "Timeline",
-    setTarget: "Set target",
-    clear: "Clear",
     recommended: "Recommended standard",
     apply: "Apply",
     tooShort: "Timeline too short",
@@ -52,8 +50,6 @@ const copy = {
     weight: "体重",
     target: "目标",
     timeline: "周期",
-    setTarget: "设置目标",
-    clear: "清除",
     recommended: "推荐标准周期",
     apply: "应用",
     tooShort: "时间过短",
@@ -87,9 +83,7 @@ export function TuneNumbersStep({
   onProteinChange
 }: TuneNumbersStepProps) {
   const t = copy[language];
-  const defaultTarget = Math.max(35, Math.min(250, Number((weightKg - 5).toFixed(1))));
   const recommendedTimeline = buildRecommendedStandardTimeline(weightKg, targetWeightKg);
-  const targetLabel = targetWeightKg === undefined ? labels.notSet : formatNumber(targetWeightKg, 0.1);
 
   return (
     <div className="setup-step-pane tune-numbers-pane" key="body-step">
@@ -101,39 +95,31 @@ export function TuneNumbersStep({
       <section className="tune-numbers-stack" aria-label={t.bodyData}>
         <div className="tune-primary-stack">
           <TunePrimaryCard
-            icon="↧"
             title={t.weight}
             value={weightKg}
             suffix="kg"
             min={35}
-            max={250}
+            max={170}
             step={0.1}
             onChange={onWeightChange}
           />
 
           <TunePrimaryCard
-            icon="◎"
             title={t.target}
             value={targetWeightKg}
-            valueLabel={targetLabel}
             suffix="kg"
             min={35}
-            max={250}
+            max={170}
             step={0.1}
-            emptyActionLabel={t.setTarget}
-            trailingActionLabel={targetWeightKg === undefined ? undefined : t.clear}
-            onEmptyAction={() => onTargetWeightChange(defaultTarget)}
-            onTrailingAction={() => onTargetWeightChange(undefined)}
             onChange={onTargetWeightChange}
           />
 
           <TunePrimaryCard
-            icon="□"
             title={t.timeline}
             value={expectedTimelineWeeks}
             suffix="weeks"
             min={1}
-            max={156}
+            max={86}
             step={1}
             onChange={onExpectedTimelineChange}
             footer={
@@ -149,9 +135,9 @@ export function TuneNumbersStep({
         </div>
 
         <div className="tune-secondary-grid" aria-label="Secondary body settings">
-          <TuneCompactStepper title={t.age} value={age} suffix="years" min={18} max={80} step={1} onChange={onAgeChange} />
+          <TuneCompactStepper title={t.age} value={age} suffix="years" min={14} max={65} step={1} onChange={onAgeChange} />
           <TuneCompactStepper title={t.height} value={heightCm} suffix="cm" min={130} max={230} step={1} onChange={onHeightChange} />
-          <TuneCompactStepper title={t.training} value={trainingDaysPerWeek} suffix="/wk" min={0} max={6} step={1} onChange={onTrainingDaysChange} />
+          <TuneCompactStepper title={t.training} value={trainingDaysPerWeek} suffix="/wk" min={0} max={7} step={1} onChange={onTrainingDaysChange} />
           <TuneCompactStepper title={t.protein} value={proteinFactor} suffix="g/kg" min={1.4} max={2.4} step={0.1} onChange={onProteinChange} />
         </div>
       </section>
@@ -160,71 +146,53 @@ export function TuneNumbersStep({
 }
 
 function TunePrimaryCard({
-  icon,
   title,
   value,
-  valueLabel,
   suffix,
   min,
   max,
   step,
-  emptyActionLabel,
-  trailingActionLabel,
   footer,
-  onChange,
-  onEmptyAction,
-  onTrailingAction
+  onChange
 }: {
-  icon: string;
   title: string;
-  value?: number;
-  valueLabel?: string;
+  value: number;
   suffix: string;
   min: number;
   max: number;
   step: number;
-  emptyActionLabel?: string;
-  trailingActionLabel?: string;
   footer?: ReactNode;
   onChange: (value: number) => void;
-  onEmptyAction?: () => void;
-  onTrailingAction?: () => void;
 }) {
-  const isEmpty = value === undefined;
-  const displayValue = valueLabel ?? (value === undefined ? "—" : formatNumber(value, step));
+  const safeValue = clampNumber(value, min, max, step);
+  const displayValue = formatNumber(safeValue, step);
 
   return (
-    <article className={`tune-control-card tune-control-card-primary ${isEmpty ? "empty" : ""}`}>
+    <article className="tune-control-card tune-control-card-primary">
       <div className="tune-card-head">
-        <span className="tune-card-icon" aria-hidden="true">{icon}</span>
         <div>
           <span className="tune-card-title">{title}</span>
-          <strong className="tune-card-value">{displayValue}{!isEmpty && <em>{suffix}</em>}</strong>
+          <strong className="tune-card-value">{displayValue}<em>{suffix}</em></strong>
         </div>
-        {trailingActionLabel && <button className="tune-clear-pill" type="button" onClick={onTrailingAction}>{trailingActionLabel}</button>}
       </div>
 
-      {isEmpty ? (
-        <button className="tune-set-target-button" type="button" onClick={onEmptyAction}>{emptyActionLabel}</button>
-      ) : (
-        <div className="tune-slider-row">
-          <button className="tune-round-stepper" type="button" onClick={() => onChange(clampNumber(value - step, min, max, step))}>−</button>
-          <div className="tune-slider-shell">
-            <input
-              className="tune-premium-range"
-              type="range"
-              min={min}
-              max={max}
-              step={step}
-              value={value}
-              style={{ "--tune-progress": `${progressPercent(value, min, max)}%` } as CSSProperties}
-              onChange={(event) => onChange(clampNumber(Number(event.target.value), min, max, step))}
-            />
-            <div className="tune-slider-scale"><span>{formatNumber(min, step)}</span><span>{formatNumber(value, step)}</span><span>{formatNumber(max, step)}</span></div>
-          </div>
-          <button className="tune-round-stepper" type="button" onClick={() => onChange(clampNumber(value + step, min, max, step))}>+</button>
+      <div className="tune-slider-row">
+        <button className="tune-round-stepper" type="button" onClick={() => onChange(clampNumber(safeValue - step, min, max, step))}>−</button>
+        <div className="tune-slider-shell">
+          <input
+            className="tune-premium-range"
+            type="range"
+            min={min}
+            max={max}
+            step={step}
+            value={safeValue}
+            style={{ "--tune-progress": `${progressPercent(safeValue, min, max)}%` } as CSSProperties}
+            onChange={(event) => onChange(clampNumber(Number(event.target.value), min, max, step))}
+          />
+          <div className="tune-slider-scale"><span>{formatNumber(min, step)}</span><span>{displayValue}</span><span>{formatNumber(max, step)}</span></div>
         </div>
-      )}
+        <button className="tune-round-stepper" type="button" onClick={() => onChange(clampNumber(safeValue + step, min, max, step))}>+</button>
+      </div>
 
       {footer}
     </article>
@@ -270,23 +238,25 @@ function TimelineRiskStrip({
 }
 
 function TuneCompactStepper({ title, value, suffix, min, max, step, onChange }: { title: string; value: number; suffix: string; min: number; max: number; step: number; onChange: (value: number) => void }) {
+  const safeValue = clampNumber(value, min, max, step);
+
   return (
     <div className="tune-compact-stepper">
       <span>{title}</span>
       <div className="tune-compact-controls">
-        <button type="button" onClick={() => onChange(clampNumber(value - step, min, max, step))}>−</button>
-        <strong>{formatNumber(value, step)}<em>{suffix}</em></strong>
-        <button type="button" onClick={() => onChange(clampNumber(value + step, min, max, step))}>+</button>
+        <button type="button" onClick={() => onChange(clampNumber(safeValue - step, min, max, step))}>−</button>
+        <strong>{formatNumber(safeValue, step)}<em>{suffix}</em></strong>
+        <button type="button" onClick={() => onChange(clampNumber(safeValue + step, min, max, step))}>+</button>
       </div>
     </div>
   );
 }
 
-function buildRecommendedStandardTimeline(currentWeightKg: number, targetWeightKg: number | undefined): number {
-  if (!Number.isFinite(currentWeightKg) || targetWeightKg === undefined || !Number.isFinite(targetWeightKg) || targetWeightKg >= currentWeightKg) return 12;
+function buildRecommendedStandardTimeline(currentWeightKg: number, targetWeightKg: number): number {
+  if (!Number.isFinite(currentWeightKg) || !Number.isFinite(targetWeightKg) || targetWeightKg >= currentWeightKg) return 12;
   const totalLossKg = currentWeightKg - targetWeightKg;
   const standardWeeklyRate = currentWeightKg * 0.0075;
-  return Math.min(156, Math.max(1, Math.ceil(totalLossKg / standardWeeklyRate)));
+  return Math.min(86, Math.max(1, Math.ceil(totalLossKg / standardWeeklyRate)));
 }
 
 function clampNumber(value: number, min: number, max: number, step: number): number {
