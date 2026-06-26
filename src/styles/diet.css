@@ -36,6 +36,7 @@
   max-width: 430px;
   min-width: 0;
   overflow: hidden;
+  padding: 14px;
   scroll-snap-align: center;
   scroll-snap-stop: always;
 }
@@ -43,21 +44,21 @@
 .diet-day-head {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
   align-items: flex-start;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .diet-day-head strong {
   display: block;
-  margin-top: 6px;
-  font-size: 24px;
+  margin-top: 4px;
+  font-size: 22px;
   letter-spacing: -0.05em;
 }
 
 .diet-day-target {
   display: grid;
-  gap: 4px;
+  gap: 3px;
   justify-items: end;
   text-align: right;
 }
@@ -73,18 +74,18 @@
 
 .diet-day-target strong {
   margin: 0;
-  font-size: 18px;
+  font-size: 17px;
 }
 
 .diet-meal-stack {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .diet-meal {
   background: #f5f5f7;
-  border-radius: 20px;
-  padding: 14px;
+  border-radius: 17px;
+  padding: 10px 11px;
 }
 
 .diet-meal-interactive {
@@ -95,41 +96,42 @@
 .diet-meal-head {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 7px;
 }
 
 .diet-meal-head strong {
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .diet-food-list {
   display: flex;
-  gap: 7px;
+  gap: 5px;
   flex-wrap: wrap;
 }
 
 .diet-food-list span {
   display: inline-flex;
-  padding: 6px 9px;
+  padding: 4px 7px;
   border-radius: 999px;
   background: #ffffff;
   color: var(--text);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 650;
+  line-height: 1.12;
 }
 
 .diet-macro-line,
 .diet-total-line {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 .diet-total-line {
-  padding-top: 12px;
+  padding-top: 9px;
   border-top: 1px solid var(--border);
   align-items: center;
 }
@@ -344,6 +346,15 @@
   .diet-day-target {
     justify-items: start;
     text-align: left;
+  }
+
+  .diet-day-card {
+    padding: 13px;
+  }
+
+  .diet-meal {
+    border-radius: 16px;
+    padding: 9px 10px;
   }
 
   .meal-composer-overlay {
