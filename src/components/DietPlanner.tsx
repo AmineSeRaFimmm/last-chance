@@ -1,4 +1,4 @@
-import { useRef, useState, type PointerEvent } from "react";
+import { useLayoutEffect, useRef, useState, type PointerEvent, type UIEvent } from "react";
 import { buildDietWeek } from "../core/dietPlan";
 import type { DietDay, DietMeal } from "../core/dietPlan";
 import { getMealFoodOptions, getMealFoodRole, optimizeMealFromFoodNames, sumDietMeals } from "../core/mealOptimizer";
@@ -50,6 +50,17 @@ export function DietPlanner() {
   const savedInput = loadInput();
   const [overrides, setOverrides] = useState<DietMealOverride[]>(loadDietOverrides);
   const [composer, setComposer] = useState<ComposerState | null>(null);
+  const weekTrackRef = useRef<HTMLDivElement | null>(null);
+  const isLoopingRef = useRef(false);
+  const baseWeek = savedInput ? buildDietWeek(savedInput) : [];
+  const week = savedInput ? applyOverridesToWeek(baseWeek, overrides) : [];
+  const loopingWeek = buildLoopingWeek(week);
+  const loopingBaseWeek = buildLoopingWeek(baseWeek);
+
+  useLayoutEffect(() => {
+    if (week.length <= 1) return;
+    window.requestAnimationFrame(() => scrollToLoopCard(1));
+  }, [week.length]);
 
   if (!savedInput) {
     return (
@@ -67,8 +78,47 @@ export function DietPlanner() {
     );
   }
 
-  const baseWeek = buildDietWeek(savedInput);
-  const week = applyOverridesToWeek(baseWeek, overrides);
+  function scrollToLoopCard(index: number) {
+    const track = weekTrackRef.current;
+    const card = track?.children.item(index) as HTMLElement | null;
+    if (!track || !card) return;
+
+    isLoopingRef.current = true;
+    const left = card.offsetLeft - (track.clientWidth - card.clientWidth) / 2;
+    track.scrollTo({ left, behavior: "auto" });
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        isLoopingRef.current = false;
+      });
+    });
+  }
+
+  function handleWeekScroll(event: UIEvent<HTMLDivElement>) {
+    if (isLoopingRef.current || week.length <= 1) return;
+
+    const track = event.currentTarget;
+    const children = Array.from(track.children) as HTMLElement[];
+    if (children.length < 3) return;
+
+    const trackCenter = track.scrollLeft + track.clientWidth / 2;
+    let closestIndex = 0;
+    let closestDistance = Number.POSITIVE_INFINITY;
+
+    children.forEach((child, index) => {
+      const childCenter = child.offsetLeft + child.clientWidth / 2;
+      const distance = Math.abs(childCenter - trackCenter);
+      if (distance < closestDistance) {
+        closestIndex = index;
+        closestDistance = distance;
+      }
+    });
+
+    if (closestIndex === 0) {
+      scrollToLoopCard(week.length);
+    } else if (closestIndex === children.length - 1) {
+      scrollToLoopCard(1);
+    }
+  }
 
   function openComposer(day: DietDay, baseMeal: DietMeal, meal: DietMeal) {
     setComposer({
@@ -97,16 +147,21 @@ export function DietPlanner() {
         <p className="small-note no-margin">{t.note}</p>
       </section>
 
-      <div className="diet-week-stack">
-        {week.map((day, dayIndex) => (
-          <DietDayCard
-            baseDay={baseWeek[dayIndex]}
-            day={day}
-            labels={t}
-            key={day.day}
-            onMealOpen={(baseMeal, meal) => openComposer(day, baseMeal, meal)}
-          />
-        ))}
+      <div className="diet-week-stack" onScroll={handleWeekScroll} ref={weekTrackRef}>
+        {loopingWeek.map((day, loopIndex) => {
+          const baseDay = loopingBaseWeek[loopIndex];
+          const loopKey = getLoopCardKey(loopIndex, week.length, day.day);
+
+          return (
+            <DietDayCard
+              baseDay={baseDay}
+              day={day}
+              labels={t}
+              key={loopKey}
+              onMealOpen={(baseMeal, meal) => openComposer(day, baseMeal, meal)}
+            />
+          );
+        })}
       </div>
 
       {composer && (
@@ -248,6 +303,18 @@ function applyOverridesToWeek(baseWeek: DietDay[], overrides: DietMealOverride[]
 
     return { ...day, meals, totals: sumDietMeals(meals) };
   });
+}
+
+function buildLoopingWeek<T>(week: T[]): T[] {
+  if (week.length <= 1) return week;
+  return [week[week.length - 1], ...week, week[0]];
+}
+
+function getLoopCardKey(loopIndex: number, weekLength: number, day: string): string {
+  if (weekLength <= 1) return day;
+  if (loopIndex === 0) return `loop-start-${day}`;
+  if (loopIndex === weekLength + 1) return `loop-end-${day}`;
+  return `loop-real-${day}`;
 }
 
 function loadLanguage(): Language {
