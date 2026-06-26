@@ -10,6 +10,7 @@ import "./styles/navigation.css";
 import "./styles/custom-workout.css";
 import "./styles/projection.css";
 import "./styles/diet.css";
+import "./styles/diet-selector.css";
 import "./styles/timeline.css";
 import "./styles/weekly-structure.css";
 import "./styles/motion.css";
