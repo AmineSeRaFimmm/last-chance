@@ -1,4 +1,4 @@
-import { useRef, useState, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { buildDietWeek } from "../core/dietPlan";
 import type { DietDay, DietMeal } from "../core/dietPlan";
 import { getMealFoodOptions, getMealFoodRole, optimizeMealFromFoodNames, sumDietMeals } from "../core/mealOptimizer";
@@ -32,6 +32,14 @@ const copy = {
     target: "Target",
     estimate: "Estimated",
     note: "Food values are practical estimates per 100g. Adjust seasoning, sauces, cooking oil, and brands manually.",
+    infoTitle: "Nutrition notes",
+    infoSubtitle: "The rules that matter most during a cut.",
+    infoItems: [
+      "Hit protein first, then adjust carbs and fats around training.",
+      "Keep meals repeatable; consistency beats perfect daily variety.",
+      "Use low-fat protein and high-fiber plants when hunger is high.",
+      "Do not let cooking oil, sauces, or snacks erase the deficit."
+    ],
     kcal: "kcal",
     protein: "P",
     carbs: "C",
@@ -45,6 +53,14 @@ const copy = {
     target: "目标",
     estimate: "估算",
     note: "食物数据为每 100g 实用估算值。调料、酱料、烹调用油和品牌差异需要自行修正。",
+    infoTitle: "饮食注意事项",
+    infoSubtitle: "减脂期最关键的执行原则。",
+    infoItems: [
+      "优先保证蛋白质，再根据训练日调整碳水和脂肪。",
+      "饮食越可重复，越容易稳定执行；不需要每天追求复杂变化。",
+      "饥饿感强时，优先选择低脂蛋白和高纤维蔬菜。",
+      "不要让烹调用油、酱料和零食悄悄抵消热量缺口。"
+    ],
     kcal: "kcal",
     protein: "蛋白",
     carbs: "碳水",
@@ -60,9 +76,24 @@ export function DietPlanner() {
   const [composer, setComposer] = useState<ComposerState | null>(null);
   const [activeDayIndex, setActiveDayIndex] = useState(0);
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const weekStackRef = useRef<HTMLDivElement | null>(null);
+  const firstDayCardRef = useRef<HTMLDivElement | null>(null);
+  const didAlignInitialDayRef = useRef(false);
   const baseWeek = savedInput ? buildDietWeek(savedInput) : [];
   const week = savedInput ? applyOverridesToWeek(baseWeek, overrides) : [];
   const carouselCards = getCarouselCards(week, baseWeek, activeDayIndex);
+
+  useEffect(() => {
+    if (!savedInput || didAlignInitialDayRef.current) return;
+    const stack = weekStackRef.current;
+    const firstDayCard = firstDayCardRef.current;
+    if (!stack || !firstDayCard) return;
+
+    window.requestAnimationFrame(() => {
+      stack.scrollTo({ left: firstDayCard.offsetLeft - stack.offsetLeft, behavior: "auto" });
+      didAlignInitialDayRef.current = true;
+    });
+  }, [savedInput]);
 
   if (!savedInput) {
     return (
@@ -146,9 +177,11 @@ export function DietPlanner() {
         onPointerDown={handleCarouselPointerDown}
         onPointerLeave={handleCarouselPointerCancel}
         onPointerUp={handleCarouselPointerUp}
+        ref={weekStackRef}
       >
+        <DietInfoCard labels={t} />
         {carouselCards.map(({ baseDay, day, index, slot }) => (
-          <div className={`diet-carousel-card diet-carousel-card-${slot}`} key={`${day.day}-${index}`}>
+          <div className={`diet-carousel-card diet-carousel-card-${slot}`} key={`${day.day}-${index}`} ref={index === 0 ? firstDayCardRef : undefined}>
             <DietDayCard
               baseDay={baseDay}
               day={day}
@@ -179,6 +212,24 @@ function DietHeroToplineSpacer() {
       <button type="button" tabIndex={-1}>EN</button>
       <button type="button" tabIndex={-1}>中文</button>
     </div>
+  );
+}
+
+function DietInfoCard({ labels }: { labels: typeof copy.en | typeof copy.zh }) {
+  return (
+    <section className="card diet-day-card diet-info-card" aria-label={labels.infoTitle}>
+      <div className="diet-day-head">
+        <div>
+          <div className="card-title no-margin">{labels.infoTitle}</div>
+          <strong>{labels.infoSubtitle}</strong>
+        </div>
+      </div>
+      <div className="diet-info-list">
+        {labels.infoItems.map((item) => (
+          <div className="diet-info-line" key={item}>{item}</div>
+        ))}
+      </div>
+    </section>
   );
 }
 
