@@ -295,20 +295,8 @@ function applyOverridesToWeek(baseWeek: DietDay[], overrides: DietMealOverride[]
 }
 
 function getCarouselCards(week: DietDay[], baseWeek: DietDay[], activeIndex: number): CarouselDayCard[] {
-  if (week.length === 0) return [];
-  if (week.length === 1) {
-    return [{ baseDay: baseWeek[0], day: week[0], index: 0, slot: "current" }];
-  }
-
-  const currentIndex = normalizeDayIndex(activeIndex, week.length);
-  const prevIndex = normalizeDayIndex(currentIndex - 1, week.length);
-  const nextIndex = normalizeDayIndex(currentIndex + 1, week.length);
-
-  return [
-    { baseDay: baseWeek[prevIndex], day: week[prevIndex], index: prevIndex, slot: "prev" },
-    { baseDay: baseWeek[currentIndex], day: week[currentIndex], index: currentIndex, slot: "current" },
-    { baseDay: baseWeek[nextIndex], day: week[nextIndex], index: nextIndex, slot: "next" }
-  ];
+  void activeIndex;
+  return week.map((day, index) => ({ baseDay: baseWeek[index], day, index, slot: "current" }));
 }
 
 function normalizeDayIndex(index: number, length: number): number {
