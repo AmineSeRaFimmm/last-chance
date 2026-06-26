@@ -32,6 +32,10 @@ function loadLanguage(): Language {
   return stored === "zh" ? "zh" : "en";
 }
 
+function buildSetupDefaultTargetKg(currentWeightKg: number): number {
+  return Math.max(35, Math.min(170, Number((currentWeightKg - 5).toFixed(1))));
+}
+
 export default function AppRef() {
   const savedInput = typeof window !== "undefined" ? loadInput() : null;
   const setupBodyRef = useRef<HTMLDivElement | null>(null);
@@ -55,6 +59,7 @@ export default function AppRef() {
 
   const t = copy[language];
   const effectivePlanType: PlanType = sex === "female" ? "standard" : planType;
+  const tuneTargetWeightKg = targetWeightKg ?? buildSetupDefaultTargetKg(weightKg);
   const timelineRisk = useMemo(() => buildTimelineRisk(weightKg, targetWeightKg, expectedTimelineWeeks, t), [weightKg, targetWeightKg, expectedTimelineWeeks, t]);
   const goalRatePctPerWeek = timelineRisk.planRate ?? DEFAULT_INPUTS[sex].goalRatePctPerWeek;
 
@@ -76,6 +81,11 @@ export default function AppRef() {
     document.body.classList.toggle("plan-setup-lock", setupOpen);
     return () => document.body.classList.remove("plan-setup-lock");
   }, [setupOpen]);
+
+  useEffect(() => {
+    if (!setupOpen || setupStage !== "body" || targetWeightKg !== undefined) return;
+    setTargetWeightKg(buildSetupDefaultTargetKg(weightKg));
+  }, [setupOpen, setupStage, targetWeightKg, weightKg]);
 
   useEffect(() => {
     if (!setupOpen || setupStage === "intro") return;
@@ -161,7 +171,7 @@ export default function AppRef() {
       labels={t}
       language={language}
       weightKg={weightKg}
-      targetWeightKg={targetWeightKg}
+      targetWeightKg={tuneTargetWeightKg}
       expectedTimelineWeeks={expectedTimelineWeeks}
       age={age}
       heightCm={heightCm}
