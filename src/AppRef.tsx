@@ -36,6 +36,13 @@ function buildSetupDefaultTargetKg(currentWeightKg: number): number {
   return Math.max(35, Math.min(170, Number((currentWeightKg - 5).toFixed(1))));
 }
 
+function buildSetupRecommendedTimelineWeeks(currentWeightKg: number, targetWeightKg: number): number {
+  if (!Number.isFinite(currentWeightKg) || !Number.isFinite(targetWeightKg) || targetWeightKg >= currentWeightKg) return DEFAULT_TIMELINE_WEEKS;
+  const totalLossKg = currentWeightKg - targetWeightKg;
+  const standardWeeklyRate = currentWeightKg * 0.0075;
+  return Math.min(86, Math.max(1, Math.ceil(totalLossKg / standardWeeklyRate)));
+}
+
 export default function AppRef() {
   const savedInput = typeof window !== "undefined" ? loadInput() : null;
   const setupBodyRef = useRef<HTMLDivElement | null>(null);
@@ -48,6 +55,7 @@ export default function AppRef() {
   const [weightKg, setWeightKg] = useState(savedInput?.weightKg ?? 80);
   const [targetWeightKg, setTargetWeightKg] = useState<number | undefined>(savedInput?.targetWeightKg);
   const [expectedTimelineWeeks, setExpectedTimelineWeeks] = useState(savedInput?.expectedTimelineWeeks ?? DEFAULT_TIMELINE_WEEKS);
+  const [timelineManuallyAdjusted, setTimelineManuallyAdjusted] = useState(Boolean(savedInput?.expectedTimelineWeeks));
   const [activityFactor, setActivityFactor] = useState(savedInput?.activityFactor ?? 1.5);
   const [trainingDaysPerWeek, setTrainingDaysPerWeek] = useState(savedInput?.trainingDaysPerWeek ?? 4);
   const [proteinFactor, setProteinFactor] = useState(savedInput?.proteinFactor ?? DEFAULT_INPUTS.male.proteinFactor);
@@ -86,6 +94,12 @@ export default function AppRef() {
     if (!setupOpen || setupStage !== "body" || targetWeightKg !== undefined) return;
     setTargetWeightKg(buildSetupDefaultTargetKg(weightKg));
   }, [setupOpen, setupStage, targetWeightKg, weightKg]);
+
+  useEffect(() => {
+    if (!setupOpen || setupStage !== "body" || timelineManuallyAdjusted || targetWeightKg === undefined || targetWeightKg >= weightKg) return;
+    const recommendedTimelineWeeks = buildSetupRecommendedTimelineWeeks(weightKg, targetWeightKg);
+    setExpectedTimelineWeeks((current) => (current === recommendedTimelineWeeks ? current : recommendedTimelineWeeks));
+  }, [setupOpen, setupStage, timelineManuallyAdjusted, targetWeightKg, weightKg]);
 
   useEffect(() => {
     if (!setupOpen || setupStage === "intro") return;
@@ -130,6 +144,11 @@ export default function AppRef() {
       setSetupOpen(false);
       setIsSavingPlan(false);
     }, SAVE_MORPH_MS);
+  }
+
+  function handleTuneTimelineChange(value: number) {
+    setTimelineManuallyAdjusted(true);
+    setExpectedTimelineWeeks(value);
   }
 
   function openSetupForm() {
@@ -180,7 +199,7 @@ export default function AppRef() {
       timelineRisk={timelineRisk}
       onWeightChange={setWeightKg}
       onTargetWeightChange={setTargetWeightKg}
-      onExpectedTimelineChange={setExpectedTimelineWeeks}
+      onExpectedTimelineChange={handleTuneTimelineChange}
       onAgeChange={setAge}
       onHeightChange={setHeightCm}
       onTrainingDaysChange={setTrainingDaysPerWeek}
