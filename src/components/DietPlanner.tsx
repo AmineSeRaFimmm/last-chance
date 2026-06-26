@@ -90,7 +90,8 @@ export function DietPlanner() {
     if (!stack || !firstDayCard) return;
 
     window.requestAnimationFrame(() => {
-      stack.scrollTo({ left: firstDayCard.offsetLeft - stack.offsetLeft, behavior: "auto" });
+      const paddingLeft = parseFloat(window.getComputedStyle(stack).paddingLeft) || 0;
+      stack.scrollTo({ left: firstDayCard.offsetLeft - stack.offsetLeft - paddingLeft, behavior: "auto" });
       didAlignInitialDayRef.current = true;
     });
   }, [savedInput]);
